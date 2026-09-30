@@ -22,7 +22,7 @@ test.describe('TagsInput forms', () => {
         test('synchronizes external native changes without duplicating events', async ({ page }) => {
             await page.evaluate((_) => {
                 const node = document.querySelector('#tags');
-                UI.TagsInput.init(node);
+                UI.TagsInput.init(node, { minSearch: 0 });
                 node.add(new Option('Cherry label', 'Cherry'));
                 node.value = 'Cherry';
                 node.dispatchEvent(new Event('change', { bubbles: true }));
@@ -31,6 +31,47 @@ test.describe('TagsInput forms', () => {
             await expect(page.locator('#tags option')).toHaveText(['Apple label', 'Banana label', 'Cherry label']);
             expect(await page.evaluate((_) => $('#tags').tagsinput('getValue'))).toEqual(['Cherry']);
             expect(await page.evaluate((_) => window.changes)).toBe(1);
+            await page.evaluate((_) => $('#tags').tagsinput('show'));
+            await expect(page.getByRole('option')).toHaveText(['Apple', 'Banana', 'Cherry']);
+            await expect(page.getByRole('option', { name: 'Cherry', exact: true })).toHaveAttribute('aria-selected', 'true');
+        });
+
+        for (const { action, expected } of [
+            { action: 'add', expected: ['Apple', 'Banana', 'Cherry'] },
+            { action: 'remove', expected: ['Apple'] },
+            { action: 'rename', expected: ['Apple', 'Cherry'] },
+        ]) {
+            test(`preserves pending option changes when setting values (${action})`, async ({ page }) => {
+                await page.evaluate((action) => {
+                    const node = document.querySelector('#tags');
+                    const instance = UI.TagsInput.init(node, { minSearch: 0 });
+                    if (action === 'add') {
+                        node.add(new Option('Cherry label', 'Cherry'));
+                    } else if (action === 'remove') {
+                        node.options[1].remove();
+                    } else {
+                        node.options[1].value = 'Cherry';
+                    }
+                    instance.setValue('Apple');
+                    instance.show();
+                }, action);
+                await expect(page.getByRole('option')).toHaveText(expected);
+                await expect(page.locator('#tags')).toHaveValues(['Apple']);
+                expect(await page.evaluate((_) => window.changes)).toBe(0);
+            });
+        }
+
+        test('keeps explicit suggestion data when native options change', async ({ page }) => {
+            await page.evaluate((_) => {
+                const node = document.querySelector('#tags');
+                const instance = UI.TagsInput.init(node, { data: ['Custom'], minSearch: 0 });
+                node.add(new Option('Cherry label', 'Cherry'));
+                instance.setValue('Cherry');
+                instance.show();
+            });
+            await expect(page.getByRole('option')).toHaveText(['Custom']);
+            await expect(page.locator('#tags')).toHaveValues(['Cherry']);
+            expect(await page.evaluate((_) => window.changes)).toBe(0);
         });
 
         test('observes added and removed native options', async ({ page }) => {

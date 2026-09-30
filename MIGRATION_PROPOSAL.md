@@ -2,7 +2,7 @@
 
 Date: 2026-09-30
 
-Status: sections 1–8 implemented and locally verified. Hosted CI, Codecov, and npm trusted publishing still need repository-side verification/configuration.
+Status: sections 1–9 implemented and locally verified. Hosted CI, Codecov, and npm trusted publishing still need repository-side verification/configuration.
 
 ## Recommendation
 
@@ -91,6 +91,22 @@ Verification completed:
 - Full ESLint/Stylelint and a separate demo stylesheet check pass. README documents every declared option and public instance method; local links, demo section anchors, unique IDs, and asset paths resolve. The demo directory contains only its three replacement files.
 - Packed-package checks pass for ESM and both UMD dependency-loading arrangements, minified/unminified, including registration, shared UI dependencies, exports, and all six embedded-source maps. The package contains 21 files and excludes demos, tests, workflows, and reports.
 - No component runtime, styling, or generated distribution changes were needed for this stage. Hosted CI, Codecov, and npm publishing remain external verification items.
+
+## Implementation record: section 9
+
+- Committed the README/demo migration as `43ab3a9` before starting the bug audit.
+- Reviewed all 17 original findings against the current source, styles, packaging, and regression suite. Section 9 now records each resolution and the relevant test groups, including the additional reset, renderer-disposal, pagination, and invalid-focus review targets.
+- Reproduced and fixed one remaining native synchronization defect: pending option additions/removals/value changes were discarded when a native change event or API setter synchronized the selection before the mutation observer ran. Both paths now process external option mutations before discarding internal ones.
+- Strengthened the existing native-change test and added four cases in the existing form test group. The four affected scenarios failed against the prior build; explicit suggestion data remained unaffected. No new fixture globals or separate test infrastructure were added.
+- Regenerated the four JavaScript bundles and their source maps. No stylesheet, dependency, or public API changes were needed.
+
+Verification completed:
+
+- The pre-audit suite passed all **522 browser/case combinations**. Before the fix, the strengthened native-change test and three new mutation cases failed against the previous build; the explicit-data case passed.
+- After the fix, the complete **178-case suite passes in Chromium, Firefox, and WebKit (534 browser/case combinations)**, without failures, retries, or skipped cases.
+- Build, full ESLint/Stylelint, unused-Sass checks, and all ESM/UMD bundle and source-map checks pass.
+- The dedicated Chromium coverage run passed all **178 cases** with **97.67% lines, 97.22% statements, 91.30% branches, and 100% functions**. Coverage targets and exclusions are unchanged.
+- Monocart's report summary counts two intermediate failed `expect.poll` attempts as “Errors” in the interrupted-transition test. Inspection of the report confirms the enclosing test passed; there were no failed, retried, flaky, or skipped cases. This is a reporting quirk, not a browser exception or an unresolved component defect.
 
 ## Reference projects and precedence
 
@@ -305,29 +321,41 @@ Include filled/outline and all sizes, initial tags, free entry, local suggestion
 
 ## 9. Bugs and other issues found
 
-The following table records the original v2 findings; runtime/source/style fixes are implemented in sections 4 and 5, with permanent regression coverage and CI added in sections 6 and 7; documentation/demo work is recorded in section 8. Original evidence was primarily source inspection. Four logic defects were additionally reproduced by executing the existing functions in an isolated Node context with minimal query/DOM stubs; that is not a full browser regression run. There was no Playwright suite at proposal time. The second-stage browser verification is recorded above; permanent suite/coverage results are recorded in sections 6 and 7.
+The table retains the original v2 findings and records their implementation status after the section 9 audit. The original four isolated logic reproductions were not browser tests; current browser regression evidence is identified separately below. All 17 original findings have been addressed in the migration.
 
-| Priority | Finding and evidence | Proposed fix / regression |
-| --- | --- | --- |
-| Blocker | `src/js/tags-input.js` and every prototype module use `_node`/`_options`; UI 4's `base-component.js` exposes `node`/`options` over private fields. A version-only upgrade cannot initialize correctly. | Migrate the entire component to the new base contract; test initialization, registration, options, and disposal. |
-| High | `prototype/parsers.js` uses `{}` and `value in lookup`. Reproduced: `'toString'` resolves to an inherited function instead of an option; `'constructor'`/`'__proto__'` have analogous collisions. | Use a `Map`; test reserved-name tags through selection and native form values. |
-| High | `prototype/api.js` advertises scalar `setValue`, but `helpers.js` calls `value.filter`. Reproduced: `setValue('blue')` throws. | Normalize scalar/array/null values before validation; test string/number/zero inputs. |
-| High | `getValue()` returns `_value` directly. Reproduced: pushing into the returned array mutates internal state without rendering or form synchronization. | Return a copy; test both returned-array and supplied-array mutation. |
-| High | `_setValue` compares before `_refresh` deduplicates/truncates. Reproduced: adding an existing tag emits change while the final selection is unchanged. | Normalize before comparison; test user duplicate/limit no-ops and the new silent API contract. |
-| High | `events.js` removes the last tag with `_value.pop()` and `_refresh()` without notifying the native select. | Route Backspace through the same user-change path as other removals; assert one change event and updated submitted values. |
-| High | `_refresh` empties the native select and recreates only selected values. Original option labels, identities, unselected options, and reset defaults are lost; there is no reset/native-change synchronization. | Preserve original options/defaults, manage generated tags separately, and add form/reset/disposal coverage. |
-| High | `_refreshDisabled` changes class/tabindex but never disables the editor or guards all mutation handlers. A disabled control can still be focused programmatically and edited; disabling an open control does not close it. | Propagate native disabled state, guard user actions, close/cancel work, and test disabled fieldsets too. |
-| High | `aria-activedescendent` is misspelled throughout render/data/events/lifecycle code. The combobox sits on a nonfocusable wrapper, the editor has a generic Search label, and removal controls are nonfocusable divs. | Correct the accessible structure and attributes; test labeling, focus, keyboard removal, and active-option references. |
-| High | Enter/NumpadEnter paths do not prevent default and merely open a closed menu before returning; no IME composition guard exists. | Define closed/open/empty-result confirmation behavior; prevent submission when committing and leave composition input intact. |
-| High | Remote debounce work is not canceled on ineligible searches, hide, or disposal. `Promise.resolve(getResults(...))` does not catch synchronous throws; a wrapped thenable can lose its cancel method. Old `finally` handlers still mutate loading state. | Own request generations and callbacks; test queued/pending cancellation, out-of-order success/failure, thrown callbacks, and stale pagination. |
-| High | Fade completion callbacks access fields after disposal; `dispose()` leaves scheduled work and possible window mouseup listeners alive. Methods also continue after event/render callbacks can dispose the instance. | Adopt guarded transitions, complete callback cleanup, and reentrant-disposal regressions. |
-| Medium | Disposal unconditionally removes tabindex and the hiding class instead of restoring original state. Constructor validation occurs after base registration. | Save/restore owned attributes; validate before registration; test invalid targets and reinitialization. |
-| Medium | `fullWidth` passes `$.BORDER_BOX` as a positional argument, while fQuery 5 expects `{ boxSize }`. | Correct the call; test menu width against a bordered reference and viewport bounds. |
-| Medium | `_selectValue` reads `trimValue`, but it has no declared default. Matching normalizes only the candidate, while sorting lowercases candidates but not the term. | Declare/document trimming and use consistent case/diacritic normalization; test equivalent terms and ranking. |
-| Medium | Sass uses deprecated `@import`, physical right spacing/left alignment, and an editor without inherited font/color or a width bound. Tags and suggestion text can overflow narrow containers. | Migrate Sass modules/logical styles and verify sizing, RTL, overflow, and UI form integration. |
-| Medium | Runtime imports are undeclared, `main` points at source, distribution is UMD-only, and there are no test/CI/coverage scripts. Demo dependencies use mutable legacy CDN URLs. | Apply the packaging, Vite, CI, documentation, and demo changes above. |
+Test paths below are relative to `test/browser/`.
 
-Browser tests should establish exact observable behavior for the source-inspected findings before and after each fix. Additional review targets include canceled resets, custom renderer disposal, duplicate remote pages, and native constraint-validation focus; these are test requirements, not claims of already reproduced browser failures.
+| Priority | Original finding and evidence | Resolution | Regression evidence |
+| --- | --- | --- | --- |
+| Blocker | `src/js/tags-input.js` and every prototype module use `_node`/`_options`; UI 4's `base-component.js` exposes `node`/`options` over private fields. A version-only upgrade cannot initialize correctly. | Resolved in §4: use UI 4 `node`/`options`, private state, and registration through `initComponent`. | `tags-input.test.js`: `#init`, `#dispose`, class and QuerySet cases. |
+| High | `prototype/parsers.js` uses `{}` and `value in lookup`. Reproduced: `'toString'` resolves to an inherited function instead of an option; `'constructor'`/`'__proto__'` have analogous collisions. | Resolved in §4: native option lookup uses `Map`. | `tags-input.test.js`: `#setValue` reserved values (`toString`, `constructor`, `__proto__`). |
+| High | `prototype/api.js` advertises scalar `setValue`, but `helpers.js` calls `value.filter`. Reproduced: `setValue('blue')` throws. | Resolved in §4: normalize scalar, array, nullish, numeric, and duplicate values before selection. | `tags-input.test.js`: `#setValue` normalization cases. |
+| High | `getValue()` returns `_value` directly. Reproduced: pushing into the returned array mutates internal state without rendering or form synchronization. | Resolved in §4: copy values on input and return a copy from `getValue()`. | `tags-input.test.js`: `#getValue`, `#setValue` caller-array mutation. |
+| High | `_setValue` compares before `_refresh` deduplicates/truncates. Reproduced: adding an existing tag emits change while the final selection is unchanged. | Resolved in §4: normalize/validate/limit before comparison; API setters are silent and effective user changes notify once. | `tags-input.test.js`: setter groups, `events`, duplicate-selection user case, and `maxSelections option`. |
+| High | `events.js` removes the last tag with `_value.pop()` and `_refresh()` without notifying the native select. | Resolved in §4: Backspace uses the shared user-change path, updating native selection before notification. | `tags-input.test.js`: `user events` Backspace case asserts native values and one event. |
+| High | `_refresh` empties the native select and recreates only selected values. Original option labels, identities, unselected options, and reset defaults are lost; there is no reset/native-change synchronization. | Resolved in §4, with an additional pending-option fix in §9 below: preserve original options, labels, defaults, native changes, and reset behavior. | `tags-input.test.js`: `#dispose` option identity; `tags-input-form.test.js`: `native synchronization`, `submission`, `reset`. |
+| High | `_refreshDisabled` changes class/tabindex but never disables the editor or guards all mutation handlers. A disabled control can still be focused programmatically and edited; disabling an open control does not close it. | Resolved in §4: propagate native/fieldset disabled state, guard user mutations, and force closure despite a canceled hide event. | `tags-input-form.test.js`: `disabled state`, disabled FormData; `tags-input-data.test.js`: cancellation on disable. |
+| High | `aria-activedescendent` is misspelled throughout render/data/events/lifecycle code. The combobox sits on a nonfocusable wrapper, the editor has a generic Search label, and removal controls are nonfocusable divs. | Resolved in §4: editor owns combobox semantics; labels and descriptions propagate; removal controls are buttons; use `aria-activedescendant`. | `tags-input.test.js`: `#init`, keyboard navigation/removal; `tags-input-form.test.js`: labels and keyboard focus. |
+| High | Enter/NumpadEnter paths do not prevent default and merely open a closed menu before returning; no IME composition guard exists. | Resolved in §4: confirm Enter by its standard key value, prevent submission when committing, and guard composition. | `tags-input.test.js`: closed-menu confirmation, `confirmKeys option`, IME; `tags-input-form.test.js`: Enter submission cases. |
+| High | Remote debounce work is not canceled on ineligible searches, hide, or disposal. `Promise.resolve(getResults(...))` does not catch synchronous throws; a wrapped thenable can lose its cancel method. Old `finally` handlers still mutate loading state. | Resolved in §4: own debounce/throttle cancellation, preserve cancellable thenables, catch throws/rejections, and guard request generations. | `tags-input-data.test.js`: `errors and retry`, `cancellation`, `pagination`, `debounce`. |
+| High | Fade completion callbacks access fields after disposal; `dispose()` leaves scheduled work and possible window mouseup listeners alive. Methods also continue after event/render callbacks can dispose the instance. | Resolved in §4: guard transition/request/value generations and callback disposal; clean up timers, observers, owned handlers, and Popper. The old window-mouseup path was removed. | `tags-input.test.js`: callback disposal, lifecycle-listener disposal, interrupted transitions and recursion; form listener isolation; remote cancellation. |
+| Medium | Disposal unconditionally removes tabindex and the hiding class instead of restoring original state. Constructor validation occurs after base registration. | Resolved in §4: validate before base registration and restore original visibility/tabindex/ARIA state. | `tags-input.test.js`: invalid targets, repeated disposal, original attributes, and reinitialization. |
+| Medium | `fullWidth` passes `$.BORDER_BOX` as a positional argument, while fQuery 5 expects `{ boxSize }`. | Resolved in §4: call `$.width(reference, { boxSize: $.BORDER_BOX })`. | `tags-input-style.test.js`: `control sizing`, `attachment and positioning` in both directions. |
+| Medium | `_selectValue` reads `trimValue`, but it has no declared default. Matching normalizes only the candidate, while sorting lowercases candidates but not the term. | Resolved in §4: declare `trimValue: false` and normalize both operands for matching/sorting. | `tags-input.test.js`: `matching and sorting`, `trimValue option`. |
+| Medium | Sass uses deprecated `@import`, physical right spacing/left alignment, and an editor without inherited font/color or a width bound. Tags and suggestion text can overflow narrow containers. | Resolved in §5: Sass modules and logical properties, inherited typography, bounded chips/editor, and wrapped menu results. | `tags-input-style.test.js`: sizing, selection overflow, search sizing, menu overflow, groups, floating labels, and modal; Sass lint/build. |
+| Medium | Runtime imports are undeclared, `main` points at source, distribution is UMD-only, and there are no test/CI/coverage scripts. Demo dependencies use mutable legacy CDN URLs. | Resolved in §§1–3 and §§6–8: declared peers, compiled ESM/UMD exports, tests/coverage/CI, and replacement UI v4 demos. | Package-consumption checks and README/demo validation recorded above. Hosted CI/OIDC remain release setup items. |
+
+### Additional issue found in the section 9 audit
+
+**Fixed: pending native option changes were lost when selection synchronized immediately.** Adding `Cherry` and dispatching a native `change` event in the same task selected/rendered `Cherry`, but suggestions still contained only `Apple` and `Banana`. Calling `setValue()` immediately after adding, removing, or renaming an option had the same problem. `#setValue()` drained the observer's records after its internal option updates without processing the earlier external mutations.
+
+`#refreshData()` now handles option mutation records from both the observer callback and the start of `#setValue()`. External updates refresh native suggestions before internal records are discarded. Explicit `data` and remote suggestion providers retain precedence. The existing native-change test now verifies suggestions, and four additional cases cover immediate add/remove/rename updates and explicit data preservation, within the reference `native synchronization` group and using locator assertions.
+
+The additional review targets from the original proposal are covered: canceled resets and native invalid-focus handling in `tags-input-form.test.js`, disposal from renderers in `tags-input.test.js`, and duplicate remote pages/raw offsets in `tags-input-data.test.js`.
+
+### Remaining release items
+
+No original section 9 defect remains open. Hosted GitHub Actions, Codecov OIDC, and npm trusted publishing still need external verification/configuration. Those integrations cannot be established by local test results. TagsInput v3 has not been published by this migration.
 
 ## 10. Implementation sequence and completion checks
 

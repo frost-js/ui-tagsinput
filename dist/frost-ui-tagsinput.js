@@ -608,10 +608,8 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			this.#observer = new MutationObserver((records) => {
 				if (!this.node) return;
 				this.#bindForm();
-				if (records.some((record) => record.type === "childList" || record.target !== this.node && record.target.tagName !== "FIELDSET")) {
-					if (this.options.data === null && !this.options.getResults) this.#data = normalizeValues([...this.node.options].map((option) => option.value));
-					this.#setValue(this.#readNativeValue());
-				} else this.#refreshState();
+				if (this.#refreshData(records)) this.#setValue(this.#readNativeValue());
+				else this.#refreshState();
 			});
 			this.#observer.observe(this.node, {
 				attributes: true,
@@ -790,6 +788,16 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 		*/
 		#readNativeValue() {
 			return [...this.node.selectedOptions].map((option) => option.value);
+		}
+		/**
+		* Refreshes native suggestions when mutation records include option changes.
+		* @param {MutationRecord[]} records The observed or queued mutations.
+		* @returns {boolean} Whether native options changed.
+		*/
+		#refreshData(records) {
+			const changed = records.some((record) => record.type === "childList" || record.target !== this.node && record.target.tagName !== "FIELDSET");
+			if (changed && this.options.data === null && !this.options.getResults) this.#data = normalizeValues([...this.node.options].map((option) => option.value));
+			return changed;
 		}
 		/**
 		* Keeps focus styling while the editor, a removal button, or the menu is active.
@@ -1016,6 +1024,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 		*/
 		#setValue(value, notify = false) {
 			if (!this.node) return;
+			this.#refreshData(this.#observer?.takeRecords() ?? []);
 			const id = ++this.#valueId;
 			const options = this.options;
 			let values = normalizeValues(value, options.trimValue).filter((entry) => this.node && id === this.#valueId && options.validTag.call(this, entry));
