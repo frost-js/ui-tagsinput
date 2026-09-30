@@ -2,7 +2,7 @@
 
 Date: 2026-09-30
 
-Status: sections 1–7 implemented and locally verified. The full README rewrite and demo migration remain section 8 work. Hosted CI, Codecov, and npm trusted publishing still need repository-side verification/configuration.
+Status: sections 1–8 implemented and locally verified. Hosted CI, Codecov, and npm trusted publishing still need repository-side verification/configuration.
 
 ## Recommendation
 
@@ -10,7 +10,7 @@ Release `@fr0st/ui-tagsinput` **3.0.0**, upgrading from 2.0.9 to Frost UI 4 and 
 
 Keep TagsInput's purpose and existing API names: editable tags backed by a native multiple select, optional local or remote suggestions, and custom rendering. Do not turn it into SelectMenu or add SelectMenu-specific grouped-object data/value-resolution APIs.
 
-The first implementation stage covered sections 1–3. The second stage implements sections 4 and 5: the component now runs with UI 4, and its Sass and generated styles follow the new UI conventions. Sections 6 and 7 add the permanent testing/coverage and CI setup described below. Release acceptance still requires the full documentation/demo migration and hosted integration checks.
+The first implementation stage covered sections 1–3. The second stage implements sections 4 and 5: the component now runs with UI 4, and its Sass and generated styles follow the new UI conventions. Sections 6 and 7 add the permanent testing/coverage and CI setup described below. Section 8 completes the README and consolidated demo. Release acceptance still requires hosted integration checks.
 
 ## Implementation record: sections 1–3
 
@@ -36,7 +36,7 @@ Sass Embedded's optional fallback packages also bring in `sass`, which npm repor
 - Moved editable combobox semantics to the editor, fixed active-descendant spelling/lifecycle, and added native keyboard-operable removal buttons with tag-specific accessible names. Confirmation handles closed menus, Enter, configured keys, IME composition, and the three supported blur-policy combinations.
 - Replaced JS fades with guarded UI CSS transitions. Queued/debounced/throttled work and cancellable requests are invalidated on newer searches, ineligible terms, hide, disable, and disposal. Synchronous request errors, stale completions, thenables, pagination offsets, and consumer callback disposal are handled.
 - Migrated Sass to `_vars.scss`, `@forward`, and `@use`, with namespaced variables. Chips use primary UI tokens; styles use logical alignment/spacing, inherit editor typography/color, bound long content, and support UI sizes, input groups, floating labels, RTL, modal positioning, and reduced motion.
-- Added focused v3 behavior and Sass customization notes to README; the comprehensive README/demo rewrite remains section 8 work. The documented `@use ... with (...)` example was compiled and its spacing/color overrides verified.
+- Added focused v3 behavior and Sass customization notes to README; the comprehensive rewrite was deferred to section 8, now recorded below. The documented `@use ... with (...)` example was compiled and its spacing/color overrides verified.
 - Regenerated all JS/CSS bundles and source maps. Build, full ESLint/Stylelint, unused-Sass checking, and bundle/source-map verification pass. No legacy underscore instance fields, prototype directory/composition, misspelled active-descendant attributes, or Sass `@import` remain in source.
 
 Verification used a local, ignored harness under `.tmp/section45/`, leaving the permanent Playwright/Codecov setup for section 6. **66 focused cases passed in each of Chromium, Firefox, and WebKit (198 passes total across the main and lifecycle runs).** Checks cover API/QuerySet initialization, values and event counts, disposal from callbacks, forms/reset/validation, keyboard/IME/blur, async errors/cancellation/pagination/debounce, real interrupted transitions, UI sizing, long content, RTL, input groups, floating labels, and modal integration. Assertions use locators for DOM behavior; no light/dark test duplication was added. ESM and both UMD dependency-loading styles, minified and unminified, also pass initialization/registration checks.
@@ -61,7 +61,7 @@ node .tmp/verify-bundles.mjs
 - Added the Node 20/22/24 Chromium matrix and Node 24 Firefox/WebKit lanes. Node 24 Chromium uploads LCOV using Codecov OIDC. Both workflows lint, build, test, inspect the package, and reject changed or untracked generated bundles.
 - Added release-triggered npm publishing with provenance and OIDC. No release, publish, or coverage upload was performed. npm trusted publishing and Codecov repository access still require external configuration.
 - Verified current official action releases and used `actions/checkout@v7`, `actions/setup-node@v7`, and `codecov/codecov-action@v7`. This updates the reference checkout/setup-node majors to their current releases: [checkout v7.0.1](https://github.com/actions/checkout/releases/tag/v7.0.1), [setup-node v7.0.0](https://github.com/actions/setup-node/releases/tag/v7.0.0), and [Codecov v7.1.1](https://github.com/codecov/codecov-action/releases/tag/v7.1.1).
-- Documented development commands and integration setup in README. The comprehensive README and demo rewrite remains section 8.
+- Documented development commands and integration setup in README. The comprehensive rewrite was deferred to section 8, now recorded below.
 
 Verification completed:
 
@@ -74,6 +74,23 @@ Verification completed:
 Package consumption is checked separately from the component suite: ESM and both UMD dependency-loading arrangements pass minified/unminified initialization and registration checks, preserve shared UI/query dependencies, and retain source maps with embedded sources. The dry-run package contains 21 files; test infrastructure, workflows, and reports are excluded. Workflow/Codecov YAML parses successfully.
 
 Local browser verification uses an ignored wrapper with a dedicated port and process-readiness signal because another sibling project is testing concurrently and this environment delays probes to unopened ports. The tracked Playwright configuration retains the reference port, asset server, and HTTP readiness check. Hosted GitHub Actions and the external OIDC integrations have not been run locally.
+
+## Implementation record: section 8
+
+- Committed the preceding testing/CI work as `cab9517` before starting the documentation/demo migration.
+- Rewrote README in the reference order, with bundler, browser ESM/import-map, UMD, and custom Sass examples; all 28 options and 16 public instance methods; callback/request shapes; accessibility/forms; and v2-to-v3 migration notes.
+- Replaced the duplicated demos with `demo/index.html`, `demo/assets/demo.js`, and `demo/assets/demo.css`. The page follows UI/SelectMenu's header, hero, section navigation, cards, theme selector, and methods/event log. Its 28 controls cover styles/sizes, data, validation, confirmation/blur, async pagination/error/retry, forms, layout, RTL, and modal integration.
+- Deleted all six legacy HTML files, including the light/dark directories. No redirect pages remain.
+- Use published UI v4 CDN assets and local component bundles. The npm registry still reports TagsInput **2.0.9** on 2026-10-01, so README explicitly identifies itself as v3 documentation pending publication. Verified the npm/license badges and all dependency CDN URLs used in the browser examples.
+- Kept example instances local and initialized them explicitly. Async data is simulated locally with cancellable promises. Demo API buttons preserve focus and stop propagation so opening a menu is not immediately undone by the document's outside-click handler. Retry controls sit above the input so its open dropdown does not cover them.
+
+Verification completed:
+
+- README's browser ESM and UMD examples initialize and accept tags with the published CDN dependencies. The documented Sass customization compiles against the packed package and applies the spacing/color overrides.
+- The consolidated demo passes interaction checks in Chromium, Firefox, and WebKit with the published UI v4 assets: all 28 controls initialize, all API buttons work, and async paging/error/retry, validation/blur, forms/reset, fieldsets, modal integration, event logging, theme selection persistence, and mobile overflow checks pass without page errors. Desktop/mobile screenshots were reviewed.
+- Full ESLint/Stylelint and a separate demo stylesheet check pass. README documents every declared option and public instance method; local links, demo section anchors, unique IDs, and asset paths resolve. The demo directory contains only its three replacement files.
+- Packed-package checks pass for ESM and both UMD dependency-loading arrangements, minified/unminified, including registration, shared UI dependencies, exports, and all six embedded-source maps. The package contains 21 files and excludes demos, tests, workflows, and reports.
+- No component runtime, styling, or generated distribution changes were needed for this stage. Hosted CI, Codecov, and npm publishing remain external verification items.
 
 ## Reference projects and precedence
 
@@ -284,11 +301,11 @@ Document dependency versions, supported runtimes, stylesheet load order, the def
 
 Replace the six duplicated demo pages with `demo/index.html`, `demo/assets/demo.js`, and `demo/assets/demo.css`, following UI/SelectMenu's header, section navigation, card layout, spacing, theme selector, and methods/event log. Use `@fr0st/ui@4` npm CDN assets with local TagsInput bundles; remove the old GitHub `@latest` URLs. Keep interactive behavior in the demo script.
 
-Include filled/outline and all sizes, initial tags, free entry, local suggestions, validation, limits, custom renderers, confirmation/blur settings, removal controls, async loading/error/retry/pagination, forms/reset, disabled fieldsets, input groups, floating labels, modal integration, and methods/events. Use deterministic local async sample data. Explicitly initialize examples; do not imply the add-on automatically initializes from markup. Old demo URLs can become small redirects if preserving links is useful.
+Include filled/outline and all sizes, initial tags, free entry, local suggestions, validation, limits, custom renderers, confirmation/blur settings, removal controls, async loading/error/retry/pagination, forms/reset, disabled fieldsets, input groups, floating labels, modal integration, and methods/events. Use deterministic local async sample data. Explicitly initialize examples; do not imply the add-on automatically initializes from markup. Delete all six legacy demo pages; do not retain redirect pages.
 
 ## 9. Bugs and other issues found
 
-The following table records the original v2 findings; runtime/source/style fixes are implemented in sections 4 and 5, with permanent regression coverage and CI added in sections 6 and 7; full documentation/demo work follows in section 8. Original evidence was primarily source inspection. Four logic defects were additionally reproduced by executing the existing functions in an isolated Node context with minimal query/DOM stubs; that is not a full browser regression run. There was no Playwright suite at proposal time. The second-stage browser verification is recorded above; permanent suite/coverage results are recorded in sections 6 and 7.
+The following table records the original v2 findings; runtime/source/style fixes are implemented in sections 4 and 5, with permanent regression coverage and CI added in sections 6 and 7; documentation/demo work is recorded in section 8. Original evidence was primarily source inspection. Four logic defects were additionally reproduced by executing the existing functions in an isolated Node context with minimal query/DOM stubs; that is not a full browser regression run. There was no Playwright suite at proposal time. The second-stage browser verification is recorded above; permanent suite/coverage results are recorded in sections 6 and 7.
 
 | Priority | Finding and evidence | Proposed fix / regression |
 | --- | --- | --- |
