@@ -2,7 +2,7 @@
 
 Date: 2026-09-30
 
-Status: sections 1–3 implemented; source, styles, browser test suite, CI, README, and demo migration remain pending.
+Status: sections 1–5 implemented; the permanent browser test suite/coverage, CI, full README rewrite, and demo migration remain pending.
 
 ## Recommendation
 
@@ -10,23 +10,48 @@ Release `@fr0st/ui-tagsinput` **3.0.0**, upgrading from 2.0.9 to Frost UI 4 and 
 
 Keep TagsInput's purpose and existing API names: editable tags backed by a native multiple select, optional local or remote suggestions, and custom rendering. Do not turn it into SelectMenu or add SelectMenu-specific grouped-object data/value-resolution APIs.
 
-The first implementation stage covers sections 1–3 only. It updates package/repository configuration and distribution tooling; the existing component source is not yet compatible with UI 4 and the package is not ready for release.
+The first implementation stage covered sections 1–3. The second stage implements sections 4 and 5: the component now runs with UI 4, and its Sass and generated styles follow the new UI conventions. Release acceptance still requires the remaining testing/coverage, CI, and documentation/demo work.
 
 ## Implementation record: sections 1–3
 
 - Updated the package to 3.0.0 with the proposed peers, development dependencies, exports, scripts, Node/browser support, and publication metadata. Ran `npx sort-package-json` and regenerated the lockfile.
 - Added `.npmrc`, expanded `.gitignore`, and aligned ESLint/PostCSS configuration. Replaced Rollup with Vite and renamed `wrapper.js` to `browser.js`.
-- Generated all 12 distribution files: four JavaScript bundles, two stylesheets, and their source maps. Distribution files remain tracked; the four new ESM files must be included in the eventual commit.
+- Generated all 12 distribution files: four JavaScript bundles, two stylesheets, and their source maps. All distribution files, including the four new ESM files, were committed with this stage.
 - Resolved UI 4.0.0, fQuery 5.0.0, and Vite 8.3.1. The release-age policy selects Sass Embedded 1.105.0 and Monocart 2.13.1. PostCSS CLI remains 11.0.1 for Node 20 compatibility.
 - The resolved `baseline-browser-mapping@2.11.26` works with the build, so UI's older override was not copied.
 - A clean `npm ci`, full build, changed-configuration ESLint check, CSS lint, unused-Sass check, and package dry run passed on Node 24.21.0/npm 11.19.0. Packed-package Chromium checks passed for ESM and both UMD dependency-loading styles, each minified and unminified: exports, shared dependencies, registration, and existing UI exports are preserved. All six asset source maps include embedded sources.
-- The new lint configuration reports **24 errors in existing JavaScript source** (JSDoc, import order, and a switch-case declaration). These remain for section 4; no lint rules were disabled. Sass still warns about `@import`, scheduled for section 5.
-- Browser diagnostics confirm that initialization on a valid multiple select still throws `TagsInput must be created on a select element`: the existing source reads `_node`, absent in UI 4. Bundle loading is verified, but component behavior cannot pass until section 4 is complete.
+- At the end of this stage, lint reported **24 errors in existing JavaScript source** and Sass warned about `@import`. Both were resolved in sections 4 and 5 without disabling lint rules.
+- At the end of this stage, initialization still failed because the source read `_node`, absent in UI 4. Section 4 resolved this blocker; initialization now passes through all six checked ESM/UMD loading combinations.
 - Playwright/coverage dependencies and package scripts are in place. The configurations and test suite are still section 6 work; `npm test` is not yet an acceptance check for this intermediate state.
 
 Additional tooling findings: the original lockfile reported 2.0.8 while `package.json` reported 2.0.9, and updating it in place hit an old/new Stylelint peer-resolution conflict. A fresh dependency resolution fixed both; the previous lockfile and installed dependencies are backed up under ignored `.tmp/pre-v3-dependencies/`.
 
 Sass Embedded's optional fallback packages also bring in `sass`, which npm reports as extraneous on this platform and which can take ownership of the shared `sass` executable. `compile:css` therefore invokes `node node_modules/sass-embedded/dist/bin/sass.js` explicitly to guarantee the requested compiler; this is a deliberate, narrow difference from the reference script. npm also reports deprecated `glob`/`inflight` dependencies from the retained `clean-css-cli`, and an unapproved optional `@parcel/watcher` install script; neither blocked installation or the build, and no install-script approval was added.
+
+## Implementation record: sections 4 and 5
+
+- Replaced component prototype composition with one class containing static defaults/classes, private state/methods, typed JSDoc, and BaseComponent's `node`/`options` getters. `index.js` now only registers/exports the component; stateless normalization helpers live in `helpers.js`.
+- Implemented the v3 contracts: require a multiple select before registration, normalize scalar/array/null values to unique strings, return copies, validate/trim/limit before comparison, keep API setters silent, and notify once for effective user changes, including Backspace.
+- Preserved native option identities, labels, and reset defaults. Generated free-entry options are managed separately. Added native change/reset synchronization, dynamic external form ownership, fieldset/disabled handling, required/invalid accessibility state, label focus, and restoration of owned attributes on disposal.
+- Moved editable combobox semantics to the editor, fixed active-descendant spelling/lifecycle, and added native keyboard-operable removal buttons with tag-specific accessible names. Confirmation handles closed menus, Enter, configured keys, IME composition, and the three supported blur-policy combinations.
+- Replaced JS fades with guarded UI CSS transitions. Queued/debounced/throttled work and cancellable requests are invalidated on newer searches, ineligible terms, hide, disable, and disposal. Synchronous request errors, stale completions, thenables, pagination offsets, and consumer callback disposal are handled.
+- Migrated Sass to `_vars.scss`, `@forward`, and `@use`, with namespaced variables. Chips use primary UI tokens; styles use logical alignment/spacing, inherit editor typography/color, bound long content, and support UI sizes, input groups, floating labels, RTL, modal positioning, and reduced motion.
+- Added focused v3 behavior and Sass customization notes to README; the comprehensive README/demo rewrite remains section 8 work. The documented `@use ... with (...)` example was compiled and its spacing/color overrides verified.
+- Regenerated all JS/CSS bundles and source maps. Build, full ESLint/Stylelint, unused-Sass checking, and bundle/source-map verification pass. No legacy underscore instance fields, prototype directory/composition, misspelled active-descendant attributes, or Sass `@import` remain in source.
+
+Verification used a local, ignored harness under `.tmp/section45/`, leaving the permanent Playwright/Codecov setup for section 6. **66 focused cases passed in each of Chromium, Firefox, and WebKit (198 passes total across the main and lifecycle runs).** Checks cover API/QuerySet initialization, values and event counts, disposal from callbacks, forms/reset/validation, keyboard/IME/blur, async errors/cancellation/pagination/debounce, real interrupted transitions, UI sizing, long content, RTL, input groups, floating labels, and modal integration. Assertions use locators for DOM behavior; no light/dark test duplication was added. ESM and both UMD dependency-loading styles, minified and unminified, also pass initialization/registration checks.
+
+Two additional issues were exposed and fixed by these regressions: native form ownership changes could be lost when internal option updates drained observer records, and a focusout microtask could run before focus reached a removal button and prematurely confirm text. Form ownership is refreshed with control state, and focusout checks `relatedTarget` before scheduling blur work.
+
+Local verification commands (the harness is not part of the published package or permanent suite):
+
+```sh
+npm run lint
+npm run lint:sass:unused
+npm run build
+npx playwright test --config .tmp/section45/playwright.config.js
+node .tmp/verify-bundles.mjs
+```
 
 ## Reference projects and precedence
 
@@ -241,7 +266,7 @@ Include filled/outline and all sizes, initial tags, free entry, local suggestion
 
 ## 9. Bugs and other issues found
 
-Evidence is primarily source inspection. Four logic defects were additionally reproduced by executing the existing functions in an isolated Node context with minimal query/DOM stubs; that is not a full browser regression run. No existing Playwright suite is present, and no claim of passing browser tests is made.
+The following table records the original v2 findings; runtime/source/style fixes are implemented in sections 4 and 5, while the remaining CI/full documentation work follows later. Original evidence was primarily source inspection. Four logic defects were additionally reproduced by executing the existing functions in an isolated Node context with minimal query/DOM stubs; that is not a full browser regression run. There was no Playwright suite at proposal time. The second-stage browser verification is recorded above; permanent suite/coverage work remains section 6.
 
 | Priority | Finding and evidence | Proposed fix / regression |
 | --- | --- | --- |

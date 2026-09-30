@@ -1,79 +1,133 @@
-@import "vars";
+@forward "vars";
+
+@use "vars";
+
+.tagsinput-container {
+    min-width: 0;
+    isolation: isolate;
+}
 
 .tagsinput {
+    gap: vars.$tagsinput-item-spacing;
     align-items: center;
 
-    &:not(:disabled) {
+    &:not(.disabled) {
         cursor: text;
     }
 
     .btn {
-        --ui-btn-padding-y: #{$tagsinput-btn-padding-y};
-        --ui-btn-font-size: #{$tagsinput-btn-font-size};
-        --ui-btn-color: #{$tagsinput-btn-color};
-        --ui-btn-bg: #{$tagsinput-btn-bg};
-        --ui-btn-border-color: #{$tagsinput-btn-border-color};
-        --ui-btn-hover-bg: #{$tagsinput-btn-hover-bg};
-        --ui-btn-hover-border-color: #{$tagsinput-btn-hover-border-color};
-        --ui-btn-active-border-color: #{$tagsinput-btn-active-border-color};
+        --ui-btn-padding-y: #{vars.$tagsinput-btn-padding-y};
+        --ui-btn-font-size: #{vars.$tagsinput-btn-font-size};
+        --ui-btn-color: #{vars.$tagsinput-btn-color};
+        --ui-btn-bg: #{vars.$tagsinput-btn-bg};
+        --ui-btn-border-color: #{vars.$tagsinput-btn-border-color};
+        --ui-btn-hover-bg: #{vars.$tagsinput-btn-hover-bg};
+        --ui-btn-hover-border-color: #{vars.$tagsinput-btn-hover-border-color};
+        --ui-btn-active-border-color: #{vars.$tagsinput-btn-active-border-color};
+
+        padding-block: var(--ui-btn-padding-y);
+        font-size: var(--ui-btn-font-size);
     }
 
-    >* {
-        margin-right: $tagsinput-item-spacing;
+    .btn-group {
+        min-width: 0;
+        max-width: 100%;
+    }
+
+    .tagsinput-selection {
+        display: block;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        cursor: inherit;
+    }
+
+    .btn-close {
+        flex-shrink: 0;
+    }
+
+    &.disabled .tagsinput-selection {
+        opacity: var(--ui-disabled-opacity);
     }
 }
 
 .tagsinput-input {
     width: 0;
-    min-width: 20px;
+    min-width: min(20px, 100%);
+    max-width: 100%;
     padding: 0;
+    font: inherit;
+    color: inherit;
     outline: 0;
     background: transparent;
     border: 0;
 }
 
 .tagsinput-placeholder {
-    color: $tagsinput-placeholder-color;
+    color: vars.$tagsinput-placeholder-color;
     pointer-events: none;
     user-select: none;
 }
 
 .tagsinput-menu {
-    --ui-tagsinput-z-index: #{$tagsinput-z-index};
-    --ui-tagsinput-color: #{$tagsinput-color};
-    --ui-tagsinput-bg: #{$tagsinput-bg};
-    --ui-tagsinput-border-width: #{$tagsinput-border-width};
-    --ui-tagsinput-border-color: #{$tagsinput-border-color};
-    --ui-tagsinput-item-padding-x: #{$tagsinput-item-padding-x};
-    --ui-tagsinput-item-padding-y: #{$tagsinput-item-padding-y};
-    --ui-tagsinput-item-color: #{$tagsinput-item-color};
-    --ui-tagsinput-item-focus-color: #{$tagsinput-item-focus-color};
-    --ui-tagsinput-item-focus-bg: #{$tagsinput-item-focus-bg};
-    --ui-tagsinput-item-active-color: #{$tagsinput-item-active-color};
-    --ui-tagsinput-item-active-bg: #{$tagsinput-item-active-bg};
+    --ui-tagsinput-z-index: #{vars.$tagsinput-z-index};
+    --ui-tagsinput-color: #{vars.$tagsinput-color};
+    --ui-tagsinput-bg: #{vars.$tagsinput-bg};
+    --ui-tagsinput-border-width: #{vars.$tagsinput-border-width};
+    --ui-tagsinput-border-color: #{vars.$tagsinput-border-color};
+    --ui-tagsinput-item-padding-x: #{vars.$tagsinput-item-padding-x};
+    --ui-tagsinput-item-padding-y: #{vars.$tagsinput-item-padding-y};
+    --ui-tagsinput-item-color: #{vars.$tagsinput-item-color};
+    --ui-tagsinput-item-focus-color: #{vars.$tagsinput-item-focus-color};
+    --ui-tagsinput-item-focus-bg: #{vars.$tagsinput-item-focus-bg};
+    --ui-tagsinput-item-active-color: #{vars.$tagsinput-item-active-color};
+    --ui-tagsinput-item-active-bg: #{vars.$tagsinput-item-active-bg};
 
     position: absolute;
     z-index: var(--ui-tagsinput-z-index);
-    width: 100%;
+    width: max-content;
+    max-width: 100%;
     padding: 0;
     margin: 0;
-    overflow-y: auto;
-    font-size: $tagsinput-font-size;
+    overflow: auto;
+    overscroll-behavior: contain;
+    font-size: vars.$tagsinput-font-size;
     color: var(--ui-tagsinput-color);
-    text-align: left;
+    text-align: start;
     background-color: var(--ui-tagsinput-bg);
     border: var(--ui-tagsinput-border-width) var(--ui-border-style) var(--ui-tagsinput-border-color);
+    opacity: 0;
+    transition: opacity var(--ui-tagsinput-duration, var(--ui-transition-duration)) var(--ui-transition-timing-function);
+
+    &.show {
+        opacity: 1;
+    }
+
+    &.tagsinput-menu-sm {
+        font-size: vars.$tagsinput-sm-font-size;
+    }
+
+    &.tagsinput-menu-lg {
+        font-size: vars.$tagsinput-lg-font-size;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        transition: none;
+    }
 }
 
 .tagsinput-item {
     clear: both;
     display: block;
     width: 100%;
-    padding: var(--ui-tagsinput-item-padding-y) var(--ui-tagsinput-item-padding-x);
-    font-weight: $tagsinput-item-font-weight;
+    padding-block: var(--ui-tagsinput-item-padding-y);
+    padding-inline: var(--ui-tagsinput-item-padding-x);
+    font-weight: vars.$tagsinput-item-font-weight;
     color: var(--ui-tagsinput-item-color);
     text-align: inherit;
-    white-space: nowrap;
+    overflow-wrap: anywhere;
+    white-space: normal;
     cursor: default;
     background-color: transparent;
     border: 0;
@@ -93,11 +147,30 @@
         opacity: var(--ui-disabled-opacity);
     }
 
-    .tagsinput-menu-sm & {
-        font-size: $tagsinput-sm-font-size;
+}
+
+.input-group {
+    .tagsinput-container,
+    .tagsinput-container > .input-outline {
+        border-radius: inherit;
     }
 
-    .tagsinput-menu-lg & {
-        font-size: $tagsinput-lg-font-size;
+    .tagsinput-container > .input-outline {
+        margin-inline-start: 0;
+    }
+
+    .tagsinput-container > .input-outline.focus {
+        box-shadow: none;
+    }
+
+    .tagsinput-container > .input-filled.focus {
+        --ui-input-filled-focus-line-size: 0% calc(var(--ui-border-width) * 2);
+    }
+
+    // The hidden native select is not a visible input-group member.
+    >select:first-child + .tagsinput-container {
+        margin-inline-start: 0;
+        border-start-start-radius: inherit;
+        border-end-start-radius: inherit;
     }
 }

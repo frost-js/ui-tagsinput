@@ -8,6 +8,8 @@ It is built on top of the [FrostUI](https://github.com/elusivecodes/FrostUI) lib
 ## Table Of Contents
 - [Installation](#installation)
 - [Usage](#usage)
+- [Migrating to v3](#migrating-to-v3)
+- [Custom Sass builds](#custom-sass-builds)
 
 
 
@@ -36,3 +38,28 @@ It is built on top of the [FrostUI](https://github.com/elusivecodes/FrostUI) lib
 ## Usage
 
 Check the demo folder for examples. Full documentation and website coming soon™.
+
+## Migrating to v3
+
+Version 3 uses Frost UI 4 and fQuery 5. Initialize TagsInput on a `<select multiple>`; other elements and single selects are rejected before registration.
+
+- `setValue`, `add`, `remove`, `removeAll`, and `setMaxSelections` update silently, matching the other UI components. User edits emit one `change.ui.tagsinput` event when the selection actually changes. Applications that need notification after a programmatic update can explicitly call `$.triggerEvent(select, 'change.ui.tagsinput')`.
+- Values are normalized to unique strings, including numbers such as `0`. `setValue(null)` clears the selection, and `getValue()` returns a copy. `trimValue` defaults to `false`; enable it to trim before validation and deduplication.
+- Native options and their reset defaults are preserved. Form reset and external native `change` events synchronize the tags. The editor reflects disabled fieldsets, labels, descriptions, required state, and validation attributes.
+- Internal state and methods are private. Use the public API and the inherited `node` and `options` getters instead of underscore fields or prototype modules. `dispose()` cancels pending work and restores native attributes while retaining the current values.
+- Tag chips now use UI's primary color tokens, and spacing/alignment support RTL. Colors inherit UI's theme variables.
+
+## Custom Sass builds
+
+The stylesheet uses Sass modules. Configure it before another stylesheet loads it:
+
+```scss
+@use "@fr0st/ui-tagsinput/src/scss/tagsinput" with (
+    $tagsinput-item-spacing: .5rem,
+    $tagsinput-btn-bg: var(--ui-info),
+    $tagsinput-btn-color: var(--ui-info-contrast),
+    $tagsinput-btn-hover-bg: var(--ui-info-highlight)
+);
+```
+
+Include `node_modules` in your Sass load paths (for the CLI, `--load-path=node_modules`). The example increases tag spacing and restores the previous info color palette. The variable partial is now `_vars.scss`; Sass resolves it as `vars`. Replace legacy `@import` customization with `@use ... with (...)`. Load the compiled UI stylesheet before the TagsInput stylesheet.
