@@ -2,7 +2,7 @@
 
 Date: 2026-09-30
 
-Status: sections 1–5 implemented; the permanent browser test suite/coverage, CI, full README rewrite, and demo migration remain pending.
+Status: sections 1–7 implemented and locally verified. The full README rewrite and demo migration remain section 8 work. Hosted CI, Codecov, and npm trusted publishing still need repository-side verification/configuration.
 
 ## Recommendation
 
@@ -10,7 +10,7 @@ Release `@fr0st/ui-tagsinput` **3.0.0**, upgrading from 2.0.9 to Frost UI 4 and 
 
 Keep TagsInput's purpose and existing API names: editable tags backed by a native multiple select, optional local or remote suggestions, and custom rendering. Do not turn it into SelectMenu or add SelectMenu-specific grouped-object data/value-resolution APIs.
 
-The first implementation stage covered sections 1–3. The second stage implements sections 4 and 5: the component now runs with UI 4, and its Sass and generated styles follow the new UI conventions. Release acceptance still requires the remaining testing/coverage, CI, and documentation/demo work.
+The first implementation stage covered sections 1–3. The second stage implements sections 4 and 5: the component now runs with UI 4, and its Sass and generated styles follow the new UI conventions. Sections 6 and 7 add the permanent testing/coverage and CI setup described below. Release acceptance still requires the full documentation/demo migration and hosted integration checks.
 
 ## Implementation record: sections 1–3
 
@@ -52,6 +52,28 @@ npm run build
 npx playwright test --config .tmp/section45/playwright.config.js
 node .tmp/verify-bundles.mjs
 ```
+
+## Implementation record: sections 6 and 7
+
+- Added the reference Playwright configurations, `#test` import, local asset server, HTML fixture, opt-in clock fixture, and Chromium source coverage. The four component test files follow the SelectMenu/AuthCodeInput patterns: named class/QuerySet initialization and disposal cases, separate method groups, events, user interactions, option groups, and the reference form/remote/style grouping. Instances remain local or use Playwright handles; later public calls use QuerySet dispatch.
+- DOM checks use locator assertions. Request fields, event counts/order, instance identity, and public return values are asserted directly. Remote tests use the reference controlled-promise helper and mock clock. No light/dark duplication, skipped tests, or arbitrary sleeps were added.
+- Added the UI Codecov policy: 95% project target, 5% threshold, CI failures treated as errors, and informational patch status. Coverage includes `helpers.js`, `index.js`, and `tags-input.js`; only the erased browser re-export entry is excluded.
+- Added the Node 20/22/24 Chromium matrix and Node 24 Firefox/WebKit lanes. Node 24 Chromium uploads LCOV using Codecov OIDC. Both workflows lint, build, test, inspect the package, and reject changed or untracked generated bundles.
+- Added release-triggered npm publishing with provenance and OIDC. No release, publish, or coverage upload was performed. npm trusted publishing and Codecov repository access still require external configuration.
+- Verified current official action releases and used `actions/checkout@v7`, `actions/setup-node@v7`, and `codecov/codecov-action@v7`. This updates the reference checkout/setup-node majors to their current releases: [checkout v7.0.1](https://github.com/actions/checkout/releases/tag/v7.0.1), [setup-node v7.0.0](https://github.com/actions/setup-node/releases/tag/v7.0.0), and [Codecov v7.1.1](https://github.com/codecov/codecov-action/releases/tag/v7.1.1).
+- Documented development commands and integration setup in README. The comprehensive README and demo rewrite remains section 8.
+
+Verification completed:
+
+- **174 cases pass in Chromium, Firefox, and WebKit (522 browser/case combinations).** Chromium ran the complete final suite; Firefox/WebKit passed the original 172 cases and targeted reruns for the two added cases and extended toggle case. No failures, retries, or skipped tests remain.
+- Node **20.20.2**, **22.23.3**, and **24.21.0** each passed the build and complete Chromium suite. ESLint passes on all three runtimes; full lint and unused-Sass checks pass. All three builds reproduce the tracked distribution without changes.
+- Final source coverage: **97.76% lines, 97.21% statements, 91.24% branches, and 100% functions**. Runtime helpers and component registration have complete line coverage. No coverage exclusions or targets were weakened.
+- Workflow/Codecov YAML and multiline shell syntax checks pass. The actual hosted Actions jobs, Codecov upload, and npm publish have not been executed.
+- No additional component runtime or styling fixes were needed in this stage. The previous source/style work was committed as `e645033` before these testing/CI changes.
+
+Package consumption is checked separately from the component suite: ESM and both UMD dependency-loading arrangements pass minified/unminified initialization and registration checks, preserve shared UI/query dependencies, and retain source maps with embedded sources. The dry-run package contains 21 files; test infrastructure, workflows, and reports are excluded. Workflow/Codecov YAML parses successfully.
+
+Local browser verification uses an ignored wrapper with a dedicated port and process-readiness signal because another sibling project is testing concurrently and this environment delays probes to unopened ports. The tracked Playwright configuration retains the reference port, asset server, and HTTP readiness check. Hosted GitHub Actions and the external OIDC integrations have not been run locally.
 
 ## Reference projects and precedence
 
@@ -242,11 +264,11 @@ Use controlled promises and Playwright's clock for debounce, throttling, reset, 
 
 Use Chromium V8 coverage via Monocart and `FROST_UI_TAGSINPUT_COVERAGE`. Map `frost-ui-tagsinput.js` to its source map; report `console-summary`, HTML, and `coverage/lcov.info`. Filter to this project's `src/js/`, include unexecuted source files with `all`, and exclude the browser entry only because it contains erased re-exports. Keep `index.js` registration and all runtime helpers in coverage. Exclude dependency code.
 
-Add `.github/codecov.yml` matching UI: project target **95%**, threshold **5%**, `if_ci_failed: error`, and informational patch coverage. Do not relax the target or exclude difficult runtime paths to obtain a passing result. This is the reference Codecov status policy, not a claim that the current project already has measured coverage.
+Add `.github/codecov.yml` matching UI: project target **95%**, threshold **5%**, `if_ci_failed: error`, and informational patch coverage. Do not relax the target or exclude difficult runtime paths to obtain a passing result. The measured local results are recorded above; the hosted Codecov status remains subject to repository setup and upload.
 
 ## 7. CI and publishing
 
-Add `.github/workflows/ci.yml` following UI's main-branch push / pull-request triggers and Markdown-only path ignores. Use the reference action majors (`actions/checkout@v6`, `actions/setup-node@v6`, `codecov/codecov-action@v7`), verifying current supported releases during implementation.
+Add `.github/workflows/ci.yml` following UI's main-branch push / pull-request triggers and Markdown-only path ignores. Use the verified current action majors (`actions/checkout@v7`, `actions/setup-node@v7`, `codecov/codecov-action@v7`); checkout/setup-node have advanced since the reference workflows.
 
 Use the same matrix: Node 20/22/24 with Chromium, plus Node 24 with Firefox and WebKit. Each lane runs `npm ci`, installs its Playwright browser with system dependencies, lints, builds, and tests. Node 24/Chromium runs the dedicated coverage configuration and uploads only `coverage/lcov.info` using Codecov OIDC with upload failures treated as errors.
 
@@ -266,7 +288,7 @@ Include filled/outline and all sizes, initial tags, free entry, local suggestion
 
 ## 9. Bugs and other issues found
 
-The following table records the original v2 findings; runtime/source/style fixes are implemented in sections 4 and 5, while the remaining CI/full documentation work follows later. Original evidence was primarily source inspection. Four logic defects were additionally reproduced by executing the existing functions in an isolated Node context with minimal query/DOM stubs; that is not a full browser regression run. There was no Playwright suite at proposal time. The second-stage browser verification is recorded above; permanent suite/coverage work remains section 6.
+The following table records the original v2 findings; runtime/source/style fixes are implemented in sections 4 and 5, with permanent regression coverage and CI added in sections 6 and 7; full documentation/demo work follows in section 8. Original evidence was primarily source inspection. Four logic defects were additionally reproduced by executing the existing functions in an isolated Node context with minimal query/DOM stubs; that is not a full browser regression run. There was no Playwright suite at proposal time. The second-stage browser verification is recorded above; permanent suite/coverage results are recorded in sections 6 and 7.
 
 | Priority | Finding and evidence | Proposed fix / regression |
 | --- | --- | --- |

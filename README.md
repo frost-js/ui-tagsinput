@@ -10,6 +10,7 @@ It is built on top of the [FrostUI](https://github.com/elusivecodes/FrostUI) lib
 - [Usage](#usage)
 - [Migrating to v3](#migrating-to-v3)
 - [Custom Sass builds](#custom-sass-builds)
+- [Development](#development)
 
 
 
@@ -63,3 +64,21 @@ The stylesheet uses Sass modules. Configure it before another stylesheet loads i
 ```
 
 Include `node_modules` in your Sass load paths (for the CLI, `--load-path=node_modules`). The example increases tag spacing and restores the previous info color palette. The variable partial is now `_vars.scss`; Sass resolves it as `vars`. Replace legacy `@import` customization with `@use ... with (...)`. Load the compiled UI stylesheet before the TagsInput stylesheet.
+
+## Development
+
+Use Node 20.19+, 22.13+, or 24+ within the supported major versions in `package.json`.
+
+```sh
+npm ci
+npx playwright install --with-deps
+npm run lint
+npm test
+npm run test:coverage
+```
+
+`npm test` builds the distribution and runs Chromium, Firefox, and WebKit. `npm run test:browser` runs against the existing build; use `-- --project=chromium` to select one browser. `npm run test:headed` and `npm run test:ui` open the interactive runners. Tests serve installed UI assets and local distribution files without CDN access.
+
+Coverage uses Chromium and maps back to this package's JavaScript source. Reports are written to `coverage/index.html` and `coverage/lcov.info`. CI checks Node 20/22/24 with Chromium, plus Firefox and WebKit on Node 24, and uploads coverage to Codecov using OIDC. Commit regenerated `dist` files when source changes; CI verifies that the build leaves them unchanged.
+
+Published GitHub releases trigger the npm publishing workflow. Configure the package's npm trusted publisher for `.github/workflows/publish.yml` and enable the repository in Codecov before relying on those integrations.
