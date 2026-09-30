@@ -31,7 +31,6 @@
   color: var(--ui-secondary-color);
   pointer-events: none;
   -webkit-user-select: none;
-  -moz-user-select: none;
   user-select: none;
 }
 
