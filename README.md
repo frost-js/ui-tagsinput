@@ -1,6 +1,11 @@
 # Frost UI TagsInput
 
+[![CI](https://github.com/elusivecodes/FrostUI-TagsInput/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/elusivecodes/FrostUI-TagsInput/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/elusivecodes/FrostUI-TagsInput/branch/main/graph/badge.svg)](https://codecov.io/gh/elusivecodes/FrostUI-TagsInput)
 [![npm version](https://img.shields.io/npm/v/%40fr0st%2Fui-tagsinput?style=flat-square)](https://www.npmjs.com/package/@fr0st/ui-tagsinput)
+[![npm downloads](https://img.shields.io/npm/dm/%40fr0st%2Fui-tagsinput?style=flat-square)](https://www.npmjs.com/package/@fr0st/ui-tagsinput)
+[![JS gzip size](https://img.badgesize.io/elusivecodes/FrostUI-TagsInput/main/dist/frost-ui-tagsinput.min.js?compression=gzip&label=JS%20gzip%20size&style=flat-square)](https://github.com/elusivecodes/FrostUI-TagsInput/blob/main/dist/frost-ui-tagsinput.min.js)
+[![CSS gzip size](https://img.badgesize.io/elusivecodes/FrostUI-TagsInput/main/dist/frost-ui-tagsinput.min.css?compression=gzip&label=CSS%20gzip%20size&style=flat-square)](https://github.com/elusivecodes/FrostUI-TagsInput/blob/main/dist/frost-ui-tagsinput.min.css)
 [![license](https://img.shields.io/github/license/elusivecodes/FrostUI-TagsInput?style=flat-square)](./LICENSE)
 
 Editable tags for Frost UI, with free text, local and asynchronous suggestions, removable chips, and native form integration.
@@ -16,107 +21,86 @@ Editable tags for Frost UI, with free text, local and asynchronous suggestions, 
 - Silent programmatic updates, form submission, and reset synchronization
 - Filled and outline Frost UI v4 styles, three sizes, theme tokens, and RTL layouts
 - Native `TagsInput` class and `tagsinput` fQuery plugin
-- ESM and UMD bundles, source maps, and configurable Sass modules
+- Existing-instance reuse with frozen resolved options
+- Prebuilt ESM and UMD bundles with source maps
+- Expanded and minified component CSS with source maps
 - JSDoc-powered IntelliSense
 
 Explore [the demo](./demo/index.html) for interactive examples.
 
 ## Installation
 
-This README describes v3. Until v3 is published, build this checkout to try it; the npm badge shows the currently published version.
-
 ### Browser projects / bundlers
 
-Install TagsInput v3 with its Frost UI v4 and fQuery v5 peers:
-
 ```bash
-npm i @fr0st/ui-tagsinput@3 @fr0st/ui@4 @fr0st/query@5
+npm i @fr0st/ui-tagsinput
 ```
 
-The package root resolves to the compiled ESM bundle. Import UI CSS first, component CSS second, and the default component export:
+Frost UI TagsInput's package entry point is ESM-only and requires a browser DOM. Import the default `TagsInput` export and the stylesheets in browser projects and bundlers.
 
 ```js
 import '@fr0st/ui/dist/frost-ui.min.css';
 import '@fr0st/ui-tagsinput/dist/frost-ui-tagsinput.min.css';
 import TagsInput from '@fr0st/ui-tagsinput';
-
-const tagsInput = TagsInput.init(document.querySelector('#tags'), {
-    placeholder: 'Add some tags',
-    fullWidth: true,
-});
 ```
 
-The peer dependencies share the application's UI and fQuery instances. Package exports expose the root, `dist/*`, and `src/*`. TagsInput requires a browser DOM; load it on the client in server-rendered applications.
+`@fr0st/ui` and `@fr0st/query` are peer dependencies so the component shares the application's instances.
 
 ### Browser (ESM)
 
-Copy the component's `dist` directory to your site. Map UI, fQuery, and their shared core dependency before importing the component:
+The ESM bundle imports `@fr0st/ui` and `@fr0st/query`. fQuery also imports `@fr0st/core`, so map all three dependencies when loading the bundle directly in a browser:
 
 ```html
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fr0st/ui@4/dist/frost-ui.min.css">
-<link rel="stylesheet" href="/dist/frost-ui-tagsinput.min.css">
-
-<label for="tags">Tags</label>
-<select id="tags" multiple class="input-outline"></select>
-
+<link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/@fr0st/ui@latest/dist/frost-ui.min.css">
+<link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/@fr0st/ui-tagsinput@latest/dist/frost-ui-tagsinput.min.css">
 <script type="importmap">
 {
     "imports": {
-        "@fr0st/core": "https://cdn.jsdelivr.net/npm/@fr0st/core@4/dist/frost-core.esm.min.js",
-        "@fr0st/query": "https://cdn.jsdelivr.net/npm/@fr0st/query@5/dist/fquery.esm.min.js",
-        "@fr0st/ui": "https://cdn.jsdelivr.net/npm/@fr0st/ui@4/dist/frost-ui.esm.min.js"
+        "@fr0st/core": "https://cdn.jsdelivr.net/npm/@fr0st/core@latest/dist/frost-core.esm.min.js",
+        "@fr0st/query": "https://cdn.jsdelivr.net/npm/@fr0st/query@latest/dist/fquery.esm.min.js",
+        "@fr0st/ui": "https://cdn.jsdelivr.net/npm/@fr0st/ui@latest/dist/frost-ui.esm.min.js"
     }
 }
 </script>
 <script type="module">
-    import TagsInput from '/dist/frost-ui-tagsinput.esm.min.js';
-
-    TagsInput.init(document.querySelector('#tags'));
+    import TagsInput from 'https://cdn.jsdelivr.net/npm/@fr0st/ui-tagsinput@latest/dist/frost-ui-tagsinput.esm.min.js';
 </script>
 ```
 
 ### Browser (UMD)
 
-Load UI's all-in-one bundle before TagsInput. It supplies the `UI` and `fQuery` globals:
+Load the bundles from your own copy or a CDN:
 
 ```html
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fr0st/ui@4/dist/frost-ui.min.css">
-<link rel="stylesheet" href="/dist/frost-ui-tagsinput.min.css">
-
-<label for="tags">Tags</label>
-<select id="tags" multiple class="input-outline"></select>
-
-<script src="https://cdn.jsdelivr.net/npm/@fr0st/ui@4/dist/frost-ui-bundle.min.js"></script>
-<script src="/dist/frost-ui-tagsinput.min.js"></script>
+<link
+    rel="stylesheet"
+    href="/path/to/dist/frost-ui.min.css">
+<link
+    rel="stylesheet"
+    href="/path/to/dist/frost-ui-tagsinput.min.css">
+<script src="/path/to/dist/frost-ui-bundle.min.js"></script>
+<script src="/path/to/dist/frost-ui-tagsinput.min.js"></script>
+<!-- or -->
+<link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/@fr0st/ui@latest/dist/frost-ui.min.css">
+<link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/@fr0st/ui-tagsinput@latest/dist/frost-ui-tagsinput.min.css">
+<script src="https://cdn.jsdelivr.net/npm/@fr0st/ui@latest/dist/frost-ui-bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@fr0st/ui-tagsinput@latest/dist/frost-ui-tagsinput.min.js"></script>
 <script>
-    const tagsInput = UI.TagsInput.init(document.querySelector('#tags'));
+    const { TagsInput } = globalThis.UI;
 </script>
 ```
 
-The UMD bundle adds `TagsInput` to the existing `globalThis.UI` object. If using UI's separate build, load fQuery, UI, and TagsInput in that order. The all-in-one UI bundle already includes fQuery.
+The UMD bundle adds `TagsInput` to the existing `globalThis.UI` object. Load Frost UI's all-in-one bundle first; it supplies the `UI` and `fQuery` globals.
 
-### Custom Sass builds
-
-```bash
-npm i -D sass
-```
-
-Create an application stylesheet:
-
-```scss
-@use '@fr0st/ui-tagsinput/src/scss/tagsinput' with (
-    $tagsinput-item-spacing: .5rem,
-    $tagsinput-btn-bg: var(--ui-info),
-    $tagsinput-btn-color: var(--ui-info-contrast),
-    $tagsinput-btn-hover-bg: var(--ui-info-highlight)
-);
-```
-
-```bash
-npx sass --load-path=node_modules src/styles.scss dist/styles.css
-```
-
-The module forwards the [component variables](./src/scss/_vars.scss), all declared with `!default`. Include UI CSS separately. Configure variables with `@use ... with (...)` before another stylesheet loads the module.
+The package root resolves to the prebuilt ESM bundle. Published files under `dist/` and `src/` are also available through matching package subpaths.
 
 ## Usage
 
@@ -149,13 +133,21 @@ Calling `TagsInput.init()` again returns the existing instance. Options are appl
 
 ## Options
 
+Options are resolved in this order:
+
+1. Component defaults
+2. The element's `data-ui-*` attributes
+3. Options passed to `TagsInput.init()`
+
+Resolved `instance.options` are shallow-frozen.
+
 Options resolve in this order:
 
 1. `TagsInput.defaults`
 2. The select's `data-ui-*` attributes
 3. Options passed to `TagsInput.init()`
 
-Resolved `instance.options` are frozen. Set application-wide defaults before initializing components:
+ Set application-wide defaults before initializing components:
 
 ```js
 TagsInput.defaults.fullWidth = true;
@@ -166,45 +158,45 @@ TagsInput.defaults.debounce = 300;
 
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
-| `placeholder` | `string` | `''` | Label shown when the selection/search is empty and the editor is not focused. |
-| `lang` | `object` | See below | Interface labels and status messages. |
+| `appendTo` | `string \| HTMLElement \| null` | `null` | Menu destination; otherwise insert after the input group or generated control. |
+| `clearOnBlur` | `boolean` | `true` | Clear free text on blur when `confirmOnBlur` is false. |
+| `closeOnSelect` | `boolean` | `true` | Close suggestions after confirming a tag. |
+| `confirmKeys` | `string[]` | `[',', ' ']` | Additional keys that confirm free text. Enter also confirms. |
+| `confirmOnBlur` | `boolean` | `true` | Confirm free text when focus leaves the entire control. |
 | `data` | `(string \| number)[] \| null` | `null` | Local suggestions; otherwise read native option values. |
+| `debounce` | `number` | `250` | Remote-search delay in milliseconds. |
+| `duration` | `number` | `100` | Menu opacity transition in milliseconds; respects reduced motion. |
+| `fixed` | `boolean` | `false` | Preserve the preferred placement rather than flip it. |
+| `fullWidth` | `boolean` | `false` | Match the menu width to the control. |
 | `getResults` | `function \| null` | `null` | Load asynchronous suggestions; takes precedence over local data. |
+| `isMatch` | `function` | Case/accent-insensitive substring match | `(value, term) => boolean` for local search. |
+| `lang` | `object` | See below | Interface labels and status messages. |
+| `maxHeight` | `string` | `'250px'` | Maximum scrolling menu height. |
+| `maxSelections` | `number` | `0` | Selection limit; zero means unlimited. |
+| `minContact` | `number \| false` | `false` | Minimum Popper contact with the control. |
+| `minSearch` | `number` | `1` | Minimum search length before suggestions appear. |
+| `placeholder` | `string` | `''` | Label shown when the selection/search is empty and the editor is not focused. |
+| `placement` | `'auto' \| 'top' \| 'bottom' \| 'start' \| 'end'` | `'bottom'` | Preferred Popper placement. |
+| `position` | `'start' \| 'center' \| 'end'` | `'start'` | Menu alignment. |
 | `renderResult` | `function` | `(value) => value` | Render a suggestion. |
 | `renderSelection` | `function` | `(value) => value` | Render a selected tag. |
 | `sanitize` | `function` | `(html) => $.sanitize(html)` | Sanitize strings used as HTML. |
-| `isMatch` | `function` | Case/accent-insensitive substring match | `(value, term) => boolean` for local search. |
-| `sortResults` | `function` | Normalized match position, then value | `(a, b, term) => number` for local sorting. |
-| `validTag` | `function` | `(value) => !!value` | Validate each normalized string, including initial/API values. |
-| `trimValue` | `boolean` | `false` | Trim selected values before validation and deduplication. |
-| `maxSelections` | `number` | `0` | Selection limit; zero means unlimited. |
-| `minSearch` | `number` | `1` | Minimum search length before suggestions appear. |
-| `confirmKeys` | `string[]` | `[',', ' ']` | Additional keys that confirm free text. Enter also confirms. |
-| `confirmOnBlur` | `boolean` | `true` | Confirm free text when focus leaves the entire control. |
-| `clearOnBlur` | `boolean` | `true` | Clear free text on blur when `confirmOnBlur` is false. |
 | `showClear` | `boolean` | `true` | Show a keyboard-operable removal button beside each tag. |
-| `closeOnSelect` | `boolean` | `true` | Close suggestions after confirming a tag. |
-| `debounce` | `number` | `250` | Remote-search delay in milliseconds. |
-| `duration` | `number` | `100` | Menu opacity transition in milliseconds; respects reduced motion. |
-| `maxHeight` | `string` | `'250px'` | Maximum scrolling menu height. |
-| `appendTo` | `string \| HTMLElement \| null` | `null` | Menu destination; otherwise insert after the input group or generated control. |
-| `fullWidth` | `boolean` | `false` | Match the menu width to the control. |
-| `placement` | `'auto' \| 'top' \| 'bottom' \| 'start' \| 'end'` | `'bottom'` | Preferred Popper placement. |
-| `position` | `'start' \| 'center' \| 'end'` | `'start'` | Menu alignment. |
-| `fixed` | `boolean` | `false` | Preserve the preferred placement rather than flip it. |
+| `sortResults` | `function` | Normalized match position, then value | `(a, b, term) => number` for local sorting. |
 | `spacing` | `number` | `0` | Gap between the menu and control. |
-| `minContact` | `number \| false` | `false` | Minimum Popper contact with the control. |
+| `trimValue` | `boolean` | `false` | Trim selected values before validation and deduplication. |
+| `validTag` | `function` | `(value) => !!value` | Validate each normalized string, including initial/API values. |
 
 Default `lang` values:
 
 ```js
-{
+const lang = {
     clear: 'Remove selection',
     error: 'Error loading data.',
     loading: 'Loading..',
     maxSelections: 'Selection limit reached.',
     search: 'Search',
-}
+};
 ```
 
 ### Local data, matching, and validation
@@ -293,7 +285,7 @@ Returned strings, placeholders, and status messages pass through `sanitize`. Ret
 
 ## Data attributes
 
-Serializable options accept kebab-case `data-ui-*` attributes:
+Use kebab-case `data-ui-*` attributes for serializable options. Arrays and objects use JSON. Supply callbacks and DOM nodes through JavaScript.
 
 ```html
 <select id="tags" multiple class="input-filled"
@@ -308,21 +300,22 @@ Serializable options accept kebab-case `data-ui-*` attributes:
 </select>
 ```
 
-Array/object values use JSON. Other examples include `data-ui-show-clear="false"`, `data-ui-close-on-select="false"`, `data-ui-confirm-on-blur="false"`, and `data-ui-debounce="300"`. Supply callbacks and DOM nodes through JavaScript.
-
-Initialization is explicit. The demo uses this shared selector after initializing examples with custom callbacks:
+Other examples include `data-ui-show-clear="false"`, `data-ui-close-on-select="false"`, `data-ui-confirm-on-blur="false"`, and `data-ui-debounce="300"`.
 
 ```js
+import $ from '@fr0st/query';
+import '@fr0st/ui-tagsinput';
+
 $('[data-ui-toggle="tagsinput"]').tagsinput();
 ```
 
-`data-ui-toggle="tagsinput"` does not initialize the add-on by itself. Changing an option's data attribute after initialization does not reconfigure the existing instance.
+Data attributes configure options; they do not initialize TagsInput by themselves. Initialize the component through the class or fQuery plugin. Changing an option's data attribute after initialization does not reconfigure the existing instance.
 
 ## Methods
 
 | Method | Returns | Description |
 | --- | --- | --- |
-| `TagsInput.init(node, options?)` | `TagsInput` | Return the existing instance or initialize a native multiple select. |
+| `TagsInput.init(node, options?)` | `TagsInput` | Return the existing instance for an element or create one. |
 | `add(value)` | `void` | Silently add a string or number after normalization. |
 | `disable()` | `void` | Disable native/generated controls and close the menu. |
 | `dispose()` | `void` | Cancel owned work, remove generated markup/listeners, and restore the native select. |
@@ -340,13 +333,23 @@ $('[data-ui-toggle="tagsinput"]').tagsinput();
 | `toggle()` | `void` | Toggle suggestions. |
 | `update()` | `void` | Refresh editor width and menu position. |
 
-`instance.node` exposes the original select and `instance.options` the frozen options. Disposal restores the select's original hiding state, `tabindex`, and `aria-hidden`, while preserving option identities, labels, reset defaults, and current values. Reinitialize to create a new instance after disposal. Private fields and methods are not extension points.
+Disposal restores the select's original hiding state, `tabindex`, and `aria-hidden`, while preserving option identities, labels, reset defaults, and current values. Reinitialize to create a new instance after disposal. Private fields and methods are not extension points.
+
+## Lifecycle
+
+Calling `TagsInput.init()` again for the same element returns its existing instance. Dispose the current instance before reinitializing with different options.
+
+An instance exposes its original element as `instance.node` and its shallow-frozen resolved configuration as `instance.options`. Both become `null` after disposal.
+
+`dispose()` releases resources owned by the component and removes its registered instance. Repeated disposal is safe and does not affect a new instance initialized on the same element. Use a new instance before calling other methods after disposal.
+
+If initialization fails, the component releases resources it created and removes its registered instance before rethrowing the error. The element can then be initialized again.
 
 ## Events
 
 Events are dispatched on the native select:
 
-| Event | When |
+| Event | Description |
 | --- | --- |
 | `change.ui.tagsinput` | An effective user selection/removal changed the value. |
 | `show.ui.tagsinput` | Before opening; cancel with `event.preventDefault()`. |
@@ -385,7 +388,7 @@ $('#tags').tagsinput('hide');
 $('#tags').tagsinput('dispose');
 ```
 
-An options object initializes every matched select. A method name dispatches the public method with the remaining arguments. The first component or method result is returned.
+Pass an options object to initialize every matched element, or pass a public method name followed by its arguments. The first component or method result is returned.
 
 ## Accessibility
 
@@ -430,9 +433,11 @@ After changing native selections programmatically, dispatch a bubbling `change` 
 
 ## Themes and RTL
 
+Frost UI follows the user's preferred color scheme by default. Set `data-ui-theme="light"` or `data-ui-theme="dark"` on the document or an ancestor to select a theme explicitly.
+
 Load UI CSS before TagsInput CSS. Use `input-filled` or `input-outline` and optional `input-sm` / `input-lg` on the native select. See [the demo](./demo/index.html#integration) for input groups, floating labels, and modal-contained menus.
 
-Colors inherit UI theme tokens. UI follows the system theme unless `data-ui-theme="light"` or `data-ui-theme="dark"` is set on the document or an ancestor. A menu appended outside a scoped theme needs that theme on its destination too.
+Colors inherit Frost UI theme tokens. A menu appended outside a scoped theme needs that theme on its destination too.
 
 ```css
 .tagsinput-menu {
@@ -443,7 +448,34 @@ Colors inherit UI theme tokens. UI follows the system theme unless `data-ui-them
 
 Set `dir="rtl"` on the document, an ancestor, or the select before initialization. Logical spacing and Popper start/end placement follow the copied direction. Changing `dir` on the select is observed; reinitialize after changing only an ancestor's direction.
 
-## Migrating from v2
+### Custom Sass builds
+
+Install Sass and create an application stylesheet to customize the component:
+
+```bash
+npm i -D sass
+```
+
+`src/styles.scss`
+
+```scss
+@use "@fr0st/ui-tagsinput/src/scss/tagsinput" with (
+    $tagsinput-item-spacing: .5rem,
+    $tagsinput-btn-bg: var(--ui-info),
+    $tagsinput-btn-color: var(--ui-info-contrast),
+    $tagsinput-btn-hover-bg: var(--ui-info-highlight)
+);
+```
+
+Compile the entry point with npm package resolution enabled:
+
+```bash
+npx sass --load-path=node_modules src/styles.scss dist/styles.css
+```
+
+The `tagsinput` module forwards the [component variables](./src/scss/_vars.scss), all of which have `!default` values. Include Frost UI CSS separately. Build tools that already resolve Sass modules from npm packages do not need the explicit load path.
+
+## Migrating from 2.x
 
 - Upgrade to UI 4 and fQuery 5. The package root is compiled ESM; browser globals come from the UMD files in `dist`.
 - Initialize only `<select multiple>` elements. Tags normalize to unique strings, including numeric zero. `getValue()` returns a copy.
@@ -455,23 +487,21 @@ Set `dir="rtl"` on the document, an ancestor, or the select before initializatio
 
 ## Development
 
-Use Node.js matching `^20.19.0 || ^22.13.0 || >=24`.
+Install dependencies with `npm ci`, then install Playwright browsers with `npx playwright install --with-deps`.
 
 ```bash
-npm ci
-npx playwright install --with-deps
-npm run lint
 npm test
-npm run test:coverage
+npm run lint
+npm run build
 ```
 
-`npm test` builds JavaScript/CSS and runs Chromium, Firefox, and WebKit. `npm run test:browser`, `npm run test:headed`, and `npm run test:ui` use existing bundles; rebuild after source changes. `npm run lint:sass:unused` checks Sass variables.
+`npm test` rebuilds the bundles, then runs the Playwright suite in Chromium, Firefox, and WebKit. `npm run test:browser` runs the suite against the existing bundles, so rebuild after changing source files.
 
-Source-mapped Chromium coverage writes `coverage/index.html` and `coverage/lcov.info`. CI covers Node 20/22/24 with Chromium and Node 24 with Firefox/WebKit. Commit regenerated distribution files; CI rejects stale or untracked output.
+After building, `npm run test:coverage` runs Chromium tests and writes coverage reports to `coverage/`.
 
-To view the demo after building, serve the repository root, for example with `python3 -m http.server 8080`, then open `http://localhost:8080/demo/`. The demo uses UI v4 CDN assets and local TagsInput bundles. Async examples use deterministic local sample data.
+`npm run test:headed` and `npm run test:ui` also use the existing bundles and open headed browsers or the Playwright UI.
 
-Published GitHub releases trigger the npm publishing workflow with provenance. Configure npm trusted publishing for the `publish.yml` workflow and enable the repository in Codecov before relying on these integrations.
+To view the demo, open `demo/index.html` in your browser after building.
 
 ## License
 
