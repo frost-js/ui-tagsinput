@@ -209,16 +209,21 @@ var TagsInput = class extends BaseComponent {
 	constructor(node, options) {
 		if (!$.is(node, "select") || !node.multiple) throw new Error("TagsInput must be created on a multiple select element");
 		super(node, options);
-		this.#maxSelections = normalizeLimit(this.options.maxSelections);
-		this.#placeholderText = String(this.options.placeholder ?? "");
-		this.#tabIndex = this.node.getAttribute("tabindex");
-		this.#hidden = $.hasClass(this.node, this.constructor.classes.hide);
-		this.#ariaHidden = this.node.getAttribute("aria-hidden");
-		this.#data = normalizeValues(this.options.data ?? [...this.node.options].map((option) => option.value));
-		this.#loadResults = $._debounce((request, id) => this.#fetchResults(request, id), this.options.debounce);
-		this.#render();
-		this.#events();
-		this.#setValue(this.#readNativeValue());
+		try {
+			this.#tabIndex = this.node.getAttribute("tabindex");
+			this.#hidden = $.hasClass(this.node, this.constructor.classes.hide);
+			this.#ariaHidden = this.node.getAttribute("aria-hidden");
+			this.#maxSelections = normalizeLimit(this.options.maxSelections);
+			this.#placeholderText = String(this.options.placeholder ?? "");
+			this.#data = normalizeValues(this.options.data ?? [...this.node.options].map((option) => option.value));
+			this.#loadResults = $._debounce((request, id) => this.#fetchResults(request, id), this.options.debounce);
+			this.#render();
+			this.#events();
+			this.#setValue(this.#readNativeValue());
+		} catch (error) {
+			this.dispose();
+			throw error;
+		}
 	}
 	/**
 	* Silently adds a tag.
@@ -249,11 +254,11 @@ var TagsInput = class extends BaseComponent {
 		clearTimeout(this.#resetTimer);
 		this.#scrollHandler?.cancel();
 		this.#popper?.dispose();
-		$.removeEvent(node, "focus.ui.tagsinput", this.#focusHandler);
-		$.removeEvent(node, "change.ui.tagsinput", this.#changeHandler);
-		$.removeEvent(node, "invalid.ui.tagsinput", this.#invalidHandler);
-		$.removeEvent(node.ownerDocument, "click.ui.tagsinput", this.#documentHandler);
-		if (this.#form) $.removeEvent(this.#form, "reset.ui.tagsinput", this.#resetHandler);
+		if (this.#focusHandler) $.removeEvent(node, "focus.ui.tagsinput", this.#focusHandler);
+		if (this.#changeHandler) $.removeEvent(node, "change.ui.tagsinput", this.#changeHandler);
+		if (this.#invalidHandler) $.removeEvent(node, "invalid.ui.tagsinput", this.#invalidHandler);
+		if (this.#documentHandler) $.removeEvent(node.ownerDocument, "click.ui.tagsinput", this.#documentHandler);
+		if (this.#form && this.#resetHandler) $.removeEvent(this.#form, "reset.ui.tagsinput", this.#resetHandler);
 		if (this.#hidden) $.addClass(node, this.constructor.classes.hide);
 		else $.removeClass(node, this.constructor.classes.hide);
 		for (const [name, value] of [["tabindex", this.#tabIndex], ["aria-hidden", this.#ariaHidden]]) if (value === null) node.removeAttribute(name);
@@ -406,7 +411,7 @@ var TagsInput = class extends BaseComponent {
 	*/
 	#bindForm() {
 		if (this.#form === this.node.form) return;
-		if (this.#form) $.removeEvent(this.#form, "reset.ui.tagsinput", this.#resetHandler);
+		if (this.#form && this.#resetHandler) $.removeEvent(this.#form, "reset.ui.tagsinput", this.#resetHandler);
 		this.#form = this.node.form;
 		if (this.#form) $.addEvent(this.#form, "reset.ui.tagsinput", this.#resetHandler);
 	}

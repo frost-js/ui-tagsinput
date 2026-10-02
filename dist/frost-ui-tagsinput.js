@@ -241,16 +241,21 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 		constructor(node, options) {
 			if (!_fr0st_query.default.is(node, "select") || !node.multiple) throw new Error("TagsInput must be created on a multiple select element");
 			super(node, options);
-			this.#maxSelections = normalizeLimit(this.options.maxSelections);
-			this.#placeholderText = String(this.options.placeholder ?? "");
-			this.#tabIndex = this.node.getAttribute("tabindex");
-			this.#hidden = _fr0st_query.default.hasClass(this.node, this.constructor.classes.hide);
-			this.#ariaHidden = this.node.getAttribute("aria-hidden");
-			this.#data = normalizeValues(this.options.data ?? [...this.node.options].map((option) => option.value));
-			this.#loadResults = _fr0st_query.default._debounce((request, id) => this.#fetchResults(request, id), this.options.debounce);
-			this.#render();
-			this.#events();
-			this.#setValue(this.#readNativeValue());
+			try {
+				this.#tabIndex = this.node.getAttribute("tabindex");
+				this.#hidden = _fr0st_query.default.hasClass(this.node, this.constructor.classes.hide);
+				this.#ariaHidden = this.node.getAttribute("aria-hidden");
+				this.#maxSelections = normalizeLimit(this.options.maxSelections);
+				this.#placeholderText = String(this.options.placeholder ?? "");
+				this.#data = normalizeValues(this.options.data ?? [...this.node.options].map((option) => option.value));
+				this.#loadResults = _fr0st_query.default._debounce((request, id) => this.#fetchResults(request, id), this.options.debounce);
+				this.#render();
+				this.#events();
+				this.#setValue(this.#readNativeValue());
+			} catch (error) {
+				this.dispose();
+				throw error;
+			}
 		}
 		/**
 		* Silently adds a tag.
@@ -281,11 +286,11 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			clearTimeout(this.#resetTimer);
 			this.#scrollHandler?.cancel();
 			this.#popper?.dispose();
-			_fr0st_query.default.removeEvent(node, "focus.ui.tagsinput", this.#focusHandler);
-			_fr0st_query.default.removeEvent(node, "change.ui.tagsinput", this.#changeHandler);
-			_fr0st_query.default.removeEvent(node, "invalid.ui.tagsinput", this.#invalidHandler);
-			_fr0st_query.default.removeEvent(node.ownerDocument, "click.ui.tagsinput", this.#documentHandler);
-			if (this.#form) _fr0st_query.default.removeEvent(this.#form, "reset.ui.tagsinput", this.#resetHandler);
+			if (this.#focusHandler) _fr0st_query.default.removeEvent(node, "focus.ui.tagsinput", this.#focusHandler);
+			if (this.#changeHandler) _fr0st_query.default.removeEvent(node, "change.ui.tagsinput", this.#changeHandler);
+			if (this.#invalidHandler) _fr0st_query.default.removeEvent(node, "invalid.ui.tagsinput", this.#invalidHandler);
+			if (this.#documentHandler) _fr0st_query.default.removeEvent(node.ownerDocument, "click.ui.tagsinput", this.#documentHandler);
+			if (this.#form && this.#resetHandler) _fr0st_query.default.removeEvent(this.#form, "reset.ui.tagsinput", this.#resetHandler);
 			if (this.#hidden) _fr0st_query.default.addClass(node, this.constructor.classes.hide);
 			else _fr0st_query.default.removeClass(node, this.constructor.classes.hide);
 			for (const [name, value] of [["tabindex", this.#tabIndex], ["aria-hidden", this.#ariaHidden]]) if (value === null) node.removeAttribute(name);
@@ -438,7 +443,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 		*/
 		#bindForm() {
 			if (this.#form === this.node.form) return;
-			if (this.#form) _fr0st_query.default.removeEvent(this.#form, "reset.ui.tagsinput", this.#resetHandler);
+			if (this.#form && this.#resetHandler) _fr0st_query.default.removeEvent(this.#form, "reset.ui.tagsinput", this.#resetHandler);
 			this.#form = this.node.form;
 			if (this.#form) _fr0st_query.default.addEvent(this.#form, "reset.ui.tagsinput", this.#resetHandler);
 		}

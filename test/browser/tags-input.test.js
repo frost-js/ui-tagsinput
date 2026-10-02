@@ -93,6 +93,47 @@ test.describe('TagsInput', () => {
             await expect(page.getByRole('combobox', { name: 'Detached' })).toBeVisible();
             await expect(page.locator('.tagsinput-selection')).toHaveText(['New']);
         });
+
+        test.describe('failed initialization', () => {
+            test.beforeEach(async ({ page }) => {
+                await page.evaluate((_) => {
+                    document.body.innerHTML =
+                        '<form id="lifecycle-form"><label for="lifecycle-input">Label</label>' +
+                        '<select id="lifecycle-input" tabindex="7" aria-hidden="false" aria-describedby="hint" multiple><option value="a" selected>A</option></select></form>';
+                    window.resetCalls = 0;
+                    $.addEvent('#lifecycle-form', 'reset.ui.tagsinput', (_) => window.resetCalls++);
+                    window.documentCalls = 0;
+                    $.addEvent(document, 'click.ui.tagsinput', (_) => window.documentCalls++);
+                });
+            });
+
+            test('rolls back a sanitizer failure', async ({ page }) => {
+                await expect(page.evaluate((_) =>
+                    UI.TagsInput.init($.findOne('#lifecycle-input'), { sanitize: (_) => {
+                        throw new Error('Sanitizer failed');
+                    } }),
+                )).rejects.toThrow();
+
+                expect(await page.evaluate((_) => $.hasData('#lifecycle-input', 'tagsinput'))).toBe(false);
+                await expect(page.locator('#lifecycle-input')).not.toHaveClass(/\bvisually-hidden\b/);
+                await expect(page.locator('#lifecycle-input')).toHaveAttribute('tabindex', '7');
+                await expect(page.locator('#lifecycle-input')).toHaveAttribute('aria-hidden', 'false');
+                await expect(page.locator('#lifecycle-input')).toHaveAttribute('aria-describedby', 'hint');
+                await expect(page.locator('#lifecycle-form > label')).not.toHaveAttribute('id');
+                await expect(page.locator('#lifecycle-form > *')).toHaveCount(2);
+
+                await page.evaluate((_) => $.triggerEvent('#lifecycle-form', 'reset.ui.tagsinput'));
+                expect(await page.evaluate((_) => window.resetCalls)).toBe(1);
+                await page.evaluate((_) => $.triggerEvent(document, 'click.ui.tagsinput'));
+                expect(await page.evaluate((_) => window.documentCalls)).toBe(1);
+
+                expect(await page.evaluate((_) => {
+                    const node = $.findOne('#lifecycle-input');
+                    const instance = UI.TagsInput.init(node);
+                    return $.getData(node, 'tagsinput') === instance;
+                })).toBe(true);
+            });
+        });
     });
 
     test.describe('#dispose', () => {
