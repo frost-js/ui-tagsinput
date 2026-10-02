@@ -8,8 +8,8 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fr0st/ui@4/dist/frost-ui.min.css">
     <link rel="stylesheet" href="../dist/frost-ui-tagsinput.css">
     <link rel="stylesheet" href="assets/demo.css">
-    <script src="https://cdn.jsdelivr.net/npm/@fr0st/ui@4/dist/frost-ui-bundle.min.js"></script>
-    <script src="../dist/frost-ui-tagsinput.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@fr0st/ui@4/dist/frost-ui-bundle.min.js" defer></script>
+    <script src="../dist/frost-ui-tagsinput.js" defer></script>
     <script src="assets/demo.js" defer></script>
 </head>
 
@@ -36,7 +36,7 @@
             <div class="row g-0 align-items-stretch">
                 <div class="col-lg-7 d-flex align-items-center bg-ambient">
                     <div class="p-4 p-md-5">
-                        <span class="badge bg-primary-subtle text-primary-subtle mb-3">TagsInput v3 · Frost UI v4</span>
+                        <span class="badge bg-primary-subtle text-primary-subtle mb-3">Frost UI component</span>
                         <h1 class="display-2 mb-4">Make room for <span class="text-gradient">your ideas.</span></h1>
                         <p class="lead text-body-secondary mb-4">Type a tag, choose a suggestion, or add something new. Explore editable chips, asynchronous search, and native forms.</p>
                         <nav class="d-flex flex-wrap gap-2" aria-label="Demo sections">
@@ -424,8 +424,8 @@
                             <option>Docs</option>
                         </select>
                         <div class="d-flex flex-wrap gap-2 mt-3">
-                            <button class="btn btn-outline-primary btn-sm" type="button" data-demo-method="init">Init</button>
-                            <button class="btn btn-outline-primary btn-sm" type="button" data-demo-method="dispose">Dispose</button>
+                            <button class="btn btn-primary ripple" type="button" data-demo-method="init">Init</button>
+                            <button class="btn btn-outline-danger ripple" type="button" data-demo-method="dispose">Dispose</button>
                             <button class="btn btn-outline-primary btn-sm" type="button" data-demo-method="getValue">Get value</button>
                             <button class="btn btn-outline-primary btn-sm" type="button" data-demo-method="setValue">Set Design + Testing</button>
                             <button class="btn btn-outline-primary btn-sm" type="button" data-demo-method="add">Add Docs</button>
@@ -449,8 +449,8 @@
                     <div class="card card-body h-100 p-4">
                         <h3 class="h5">Event log</h3>
                         <p class="text-body-secondary">Interact with API topics to see events and the selected values.</p>
-                        <div class="demo-event-log overflow-auto border rounded p-3" id="event-log" role="log" aria-label="TagsInput events" aria-live="polite"></div>
-                        <button class="btn btn-secondary align-self-start mt-3" id="clear-log" type="button">Clear log</button>
+                        <div class="demo-event-log border rounded p-3" id="event-log" role="log" aria-label="TagsInput events" aria-live="polite" aria-relevant="additions"></div>
+                        <button class="btn btn-outline-secondary btn-sm ripple align-self-start mt-3" id="clear-log" type="button">Clear log</button>
                     </div>
                 </div>
             </div>
@@ -479,7 +479,7 @@
 
     <footer class="border-top bg-glass">
         <div class="container py-4 d-flex flex-wrap justify-content-between gap-2">
-            <span class="text-body-secondary">Frost UI TagsInput v3</span>
+            <span class="text-body-secondary">Frost UI TagsInput</span>
             <a href="https://github.com/elusivecodes/FrostUI-TagsInput">View the repository</a>
         </div>
     </footer>
