@@ -189,13 +189,13 @@ export default class TagsInput extends BaseComponent {
         super(node, options);
 
         try {
-            this.#tabIndex = this.node.getAttribute('tabindex');
+            this.#tabIndex = $.getAttribute(this.node, 'tabindex');
             this.#hidden = $.hasClass(this.node, this.constructor.classes.hide);
-            this.#ariaHidden = this.node.getAttribute('aria-hidden');
+            this.#ariaHidden = $.getAttribute(this.node, 'aria-hidden');
 
             this.#maxSelections = normalizeLimit(this.options.maxSelections);
             this.#placeholderText = String(this.options.placeholder ?? '');
-            this.#data = normalizeValues(this.options.data ?? [...this.node.options].map((option) => option.value));
+            this.#data = normalizeValues(this.options.data ?? [...this.node.options].map((option) => $.getValue(option)));
             this.#loadResults = $._debounce((request, id) => this.#fetchResults(request, id), this.options.debounce);
 
             this.#render();
@@ -220,7 +220,7 @@ export default class TagsInput extends BaseComponent {
      */
     disable() {
         if (this.node) {
-            this.node.disabled = true;
+            $.setProperty(this.node, { disabled: true });
             this.#refreshState();
         }
     }
@@ -264,9 +264,9 @@ export default class TagsInput extends BaseComponent {
         }
         for (const [name, value] of [['tabindex', this.#tabIndex], ['aria-hidden', this.#ariaHidden]]) {
             if (value === null) {
-                node.removeAttribute(name);
+                $.removeAttribute(node, name);
             } else {
-                node.setAttribute(name, value);
+                $.setAttribute(node, { [name]: value });
             }
         }
 
@@ -297,7 +297,7 @@ export default class TagsInput extends BaseComponent {
      */
     enable() {
         if (this.node) {
-            this.node.disabled = false;
+            $.setProperty(this.node, { disabled: false });
             this.#refreshState();
         }
     }
@@ -392,7 +392,7 @@ export default class TagsInput extends BaseComponent {
         } else {
             $.after($.closest(this.#container, '.input-group')[0] || this.#container, this.#menuNode);
         }
-        this.#searchInput.setAttribute('aria-expanded', 'true');
+        $.setAttribute(this.#searchInput, { 'aria-expanded': 'true' });
         this.#load();
         if (!this.node || !this.#open || id !== this.#transitionId) {
             return;
@@ -402,7 +402,7 @@ export default class TagsInput extends BaseComponent {
         $.css(this.#menuNode, 'opacity');
         $.addClass(this.#menuNode, 'show');
         this.#refreshFocus();
-        waitForTransition(this.#menuNode, ['opacity']).then((_) => {
+        waitForTransition(this.#menuNode, ['opacity']).then(() => {
             if (this.node && this.#open && id === this.#transitionId) {
                 $.triggerEvent(this.node, 'shown.ui.tagsinput');
             }
@@ -470,11 +470,11 @@ export default class TagsInput extends BaseComponent {
         if (!this.node || this.#container.contains(this.node.ownerDocument.activeElement)) {
             return;
         }
-        if (!$.is(this.node, ':disabled') && !this.#composing && this.#searchInput.value) {
+        if (!$.is(this.node, ':disabled') && !this.#composing && $.getValue(this.#searchInput)) {
             if (this.options.confirmOnBlur) {
-                this.#selectValue(this.#searchInput.value, false);
+                this.#selectValue($.getValue(this.#searchInput), false);
             } else if (this.options.clearOnBlur) {
-                this.#searchInput.value = '';
+                $.setValue(this.#searchInput, '');
             }
         }
         if (this.node) {
@@ -536,10 +536,10 @@ export default class TagsInput extends BaseComponent {
         }
         this.#showMore = false;
         this.#focusItem(null);
-        this.#searchInput.setAttribute('aria-expanded', 'false');
+        $.setAttribute(this.#searchInput, { 'aria-expanded': 'false' });
         $.removeClass(this.#menuNode, 'show');
         this.#refreshFocus();
-        waitForTransition(this.#menuNode, ['opacity']).then((_) => {
+        waitForTransition(this.#menuNode, ['opacity']).then(() => {
             if (!this.node || id !== this.#transitionId) {
                 return;
             }
@@ -579,12 +579,12 @@ export default class TagsInput extends BaseComponent {
      * Attaches input, native form, and lifecycle events.
      */
     #events() {
-        this.#focusHandler = (_) => {
+        this.#focusHandler = () => {
             if (this.node && !$.is(this.node, ':disabled')) {
                 $.focus(this.#searchInput);
             }
         };
-        this.#changeHandler = (_) => {
+        this.#changeHandler = () => {
             if (!this.#notifying) {
                 this.#setValue(this.#readNativeValue());
             }
@@ -597,10 +597,10 @@ export default class TagsInput extends BaseComponent {
         };
         this.#resetHandler = (event) => {
             clearTimeout(this.#resetTimer);
-            this.#resetTimer = setTimeout((_) => {
+            this.#resetTimer = setTimeout(() => {
                 if (this.node && !event.defaultPrevented) {
                     this.#invalid = false;
-                    this.#searchInput.value = '';
+                    $.setValue(this.#searchInput, '');
                     this.#setValue(this.#readNativeValue());
                     this.hide();
                 }
@@ -623,14 +623,14 @@ export default class TagsInput extends BaseComponent {
             }
         };
         $.addEvent(this.node.ownerDocument, 'click.ui.tagsinput', this.#documentHandler);
-        $.addEvent(this.#container, 'focusin.ui.tagsinput', (_) => {
+        $.addEvent(this.#container, 'focusin.ui.tagsinput', () => {
             this.#refreshFocus();
             this.#refreshPlaceholder();
         });
         $.addEvent(this.#container, 'focusout.ui.tagsinput', (event) => {
             // Focusout can checkpoint microtasks before the next control gains focus.
             if (!this.#container.contains(event.relatedTarget)) {
-                queueMicrotask((_) => this.#blur());
+                queueMicrotask(() => this.#blur());
             }
         });
         $.addEvent(this.#container, 'click.ui.tagsinput', (event) => {
@@ -640,13 +640,14 @@ export default class TagsInput extends BaseComponent {
             $.focus(this.#searchInput);
             this.show();
         });
+        // Selection keys use raw attributes to preserve strings such as "001" and "true".
         $.addEventDelegate(this.#container, 'click.ui.tagsinput', '[data-ui-action="clear"]', (event) => {
             event.preventDefault();
             event.stopPropagation();
             if (!this.node || $.is(this.node, ':disabled')) {
                 return;
             }
-            this.#setValue(this.#value.filter((value) => value !== event.currentTarget.dataset.uiValue), true);
+            this.#setValue(this.#value.filter((value) => value !== $.getAttribute(event.currentTarget, 'data-ui-value')), true);
             if (this.node) {
                 $.focus(this.#searchInput);
             }
@@ -654,24 +655,29 @@ export default class TagsInput extends BaseComponent {
         $.addEvent(this.#menuNode, 'mousedown.ui.tagsinput', (event) => event.preventDefault());
         $.addEvent(this.#menuNode, 'click.ui.tagsinput', (event) => event.stopPropagation());
         $.addEventDelegate(this.#menuNode, 'click.ui.tagsinput', '[data-ui-action="select"]', (event) => {
-            this.#selectValue(event.currentTarget.dataset.uiValue);
+            this.#selectValue($.getAttribute(event.currentTarget, 'data-ui-value'));
         });
         $.addEventDelegate(this.#menuNode, 'mouseover.ui.tagsinput', '[data-ui-action="select"]', (event) => {
             this.#focusItem(event.currentTarget);
         });
-        $.addEvent(this.#searchInput, 'compositionstart.ui.tagsinput', (_) => {
+        $.addEvent(this.#searchInput, 'compositionstart.ui.tagsinput', () => {
             this.#composing = true;
         });
-        $.addEvent(this.#searchInput, 'compositionend.ui.tagsinput', (_) => {
+        $.addEvent(this.#searchInput, 'compositionend.ui.tagsinput', () => {
             this.#composing = false;
             this.#input();
         });
-        $.addEvent(this.#searchInput, 'input.ui.tagsinput', (_) => this.#input());
+        $.addEvent(this.#searchInput, 'input.ui.tagsinput', () => this.#input());
         $.addEvent(this.#searchInput, 'keydown.ui.tagsinput', (event) => this.#keydown(event));
 
-        this.#scrollHandler = $._throttle((_) => {
-            if (this.node && this.#open && !this.#loading && this.#showMore &&
-                this.#menuNode.scrollTop >= this.#menuNode.scrollHeight - this.#menuNode.clientHeight * 1.25) {
+        this.#scrollHandler = $._throttle(() => {
+            if (
+                this.node &&
+                this.#open &&
+                !this.#loading &&
+                this.#showMore &&
+                this.#menuNode.scrollTop >= this.#menuNode.scrollHeight - this.#menuNode.clientHeight * 1.25
+            ) {
                 this.#load(this.#offset);
             }
         }, 250, { leading: false });
@@ -756,17 +762,17 @@ export default class TagsInput extends BaseComponent {
         if (!this.#menuNode) {
             return;
         }
-        const previous = this.#menuNode.querySelector('[data-ui-focus]');
+        const previous = $.findOne('[data-ui-focus]', this.#menuNode);
         if (previous) {
             $.removeClass(previous, this.constructor.classes.focus);
-            delete previous.dataset.uiFocus;
+            $.removeDataset(previous, 'uiFocus');
         }
         if (element) {
             $.addClass(element, this.constructor.classes.focus);
-            element.dataset.uiFocus = 'true';
-            this.#searchInput.setAttribute('aria-activedescendant', element.id);
+            $.setDataset(element, { uiFocus: 'true' });
+            $.setAttribute(this.#searchInput, { 'aria-activedescendant': element.id });
         } else {
-            this.#searchInput.removeAttribute('aria-activedescendant');
+            $.removeAttribute(this.#searchInput, 'aria-activedescendant');
         }
     }
 
@@ -795,19 +801,26 @@ export default class TagsInput extends BaseComponent {
      * @param {KeyboardEvent} event The keyboard event.
      */
     #keydown(event) {
-        if (!this.node || $.is(this.node, ':disabled') || event.isComposing || this.#composing ||
-            event.ctrlKey || event.altKey || event.metaKey) {
+        if (
+            !this.node ||
+            $.is(this.node, ':disabled') ||
+            event.isComposing ||
+            this.#composing ||
+            event.ctrlKey ||
+            event.altKey ||
+            event.metaKey
+        ) {
             return;
         }
         const key = event.key;
-        const active = this.#open ? this.#menuNode.querySelector('[data-ui-focus]') : null;
+        const active = this.#open ? $.findOne('[data-ui-focus]', this.#menuNode) : null;
         if (key === 'Enter' || this.options.confirmKeys.includes(key)) {
-            const value = key === 'Enter' && active ? active.dataset.uiValue : this.#searchInput.value;
+            const value = key === 'Enter' && active ? $.getAttribute(active, 'data-ui-value') : $.getValue(this.#searchInput);
             if (value || this.options.confirmKeys.includes(key)) {
                 event.preventDefault();
                 this.#selectValue(value);
             }
-        } else if (key === 'Backspace' && !this.#searchInput.value && this.#value.length) {
+        } else if (key === 'Backspace' && !$.getValue(this.#searchInput) && this.#value.length) {
             event.preventDefault();
             this.#setValue(this.#value.slice(0, -1), true);
         } else if (key === 'Escape' && this.#open) {
@@ -847,7 +860,7 @@ export default class TagsInput extends BaseComponent {
         } else {
             $.remove($.children(this.#menuNode, '[role="status"]'));
         }
-        const term = this.#searchInput.value;
+        const term = $.getValue(this.#searchInput);
         if (term.length < this.options.minSearch) {
             $.hide(this.#menuNode);
             this.update();
@@ -882,7 +895,7 @@ export default class TagsInput extends BaseComponent {
      * @returns {string[]} The selected values.
      */
     #readNativeValue() {
-        return [...this.node.selectedOptions].map((option) => option.value);
+        return [...this.node.selectedOptions].map((option) => $.getValue(option));
     }
 
     /**
@@ -894,7 +907,7 @@ export default class TagsInput extends BaseComponent {
         const changed = records.some((record) => record.type === 'childList' ||
             record.target !== this.node && record.target.tagName !== 'FIELDSET');
         if (changed && this.options.data === null && !this.options.getResults) {
-            this.#data = normalizeValues([...this.node.options].map((option) => option.value));
+            this.#data = normalizeValues([...this.node.options].map((option) => $.getValue(option)));
         }
         return changed;
     }
@@ -923,7 +936,7 @@ export default class TagsInput extends BaseComponent {
             return;
         }
         $.setHtml(this.#placeholder, html);
-        this.#placeholder.hidden = !!this.#value.length || !!this.#searchInput.value || this.node.ownerDocument.activeElement === this.#searchInput;
+        this.#placeholder.hidden = !!this.#value.length || !!$.getValue(this.#searchInput) || this.node.ownerDocument.activeElement === this.#searchInput;
     }
 
     /**
@@ -940,12 +953,12 @@ export default class TagsInput extends BaseComponent {
         } else {
             $.removeClass(this.#toggle, classes.disabled);
         }
-        this.#searchInput.disabled = disabled;
+        $.setProperty(this.#searchInput, { disabled });
         this.#searchInput.tabIndex = disabled ? -1 : Number(this.#tabIndex ?? 0);
-        this.#searchInput.setAttribute('aria-disabled', String(disabled));
-        this.#searchInput.setAttribute('aria-required', String(this.node.required));
-        for (const button of this.#toggle.querySelectorAll('button')) {
-            button.disabled = disabled;
+        $.setAttribute(this.#searchInput, { 'aria-disabled': String(disabled) });
+        $.setAttribute(this.#searchInput, { 'aria-required': String(this.node.required) });
+        for (const button of $.find('button', this.#toggle)) {
+            $.setProperty(button, { disabled });
         }
         const direction = $.css(this.node, 'direction');
         this.#container.dir = direction;
@@ -957,18 +970,18 @@ export default class TagsInput extends BaseComponent {
             $.addClass(this.#menuNode, classes.menuLarge);
         }
         for (const name of ['aria-labelledby', 'aria-describedby', 'aria-errormessage', 'aria-invalid']) {
-            const value = this.node.getAttribute(name);
+            const value = $.getAttribute(this.node, name);
             if (value === null) {
-                this.#searchInput.removeAttribute(name);
+                $.removeAttribute(this.#searchInput, name);
             } else {
-                this.#searchInput.setAttribute(name, value);
+                $.setAttribute(this.#searchInput, { [name]: value });
             }
         }
-        const label = this.node.getAttribute('aria-label') || [...this.node.labels].map((node) => node.textContent.trim()).join(' ') || this.options.lang.search;
-        this.#searchInput.setAttribute('aria-label', label);
-        this.#menuNode.setAttribute('aria-label', label);
+        const label = $.getAttribute(this.node, 'aria-label') || [...this.node.labels].map((node) => $.getText(node).trim()).join(' ') || this.options.lang.search;
+        $.setAttribute(this.#searchInput, { 'aria-label': label });
+        $.setAttribute(this.#menuNode, { 'aria-label': label });
         if (this.#invalid && !this.node.validity.valid) {
-            this.#searchInput.setAttribute('aria-invalid', 'true');
+            $.setAttribute(this.#searchInput, { 'aria-invalid': 'true' });
         }
         this.#refreshFocus();
         if (disabled) {
@@ -1057,7 +1070,7 @@ export default class TagsInput extends BaseComponent {
      * @param {number} id The request generation.
      */
     #renderResults(results, id) {
-        const seen = new Set(this.#activeItems.map((element) => element.dataset.uiValue));
+        const seen = new Set(this.#activeItems.map((element) => $.getAttribute(element, 'data-ui-value')));
         for (const value of results) {
             if (seen.has(value)) {
                 continue;
@@ -1081,7 +1094,7 @@ export default class TagsInput extends BaseComponent {
         if (!this.#menuNode.children.length) {
             $.hide(this.#menuNode);
         }
-        if (!this.#menuNode.querySelector('[data-ui-focus]')) {
+        if (!$.findOne('[data-ui-focus]', this.#menuNode)) {
             this.#focusItem(this.#activeItems[0] || null);
         }
     }
@@ -1109,10 +1122,10 @@ export default class TagsInput extends BaseComponent {
                 $.append(group, button);
             }
             $.append(group, label);
-            fragment.append(group);
+            $.append(fragment, group);
         }
         $.remove($.children(this.#toggle, '[data-ui-tag]'));
-        this.#toggle.insertBefore(fragment, this.#searchInput);
+        $.insertBefore(fragment, this.#searchInput);
     }
 
     /**
@@ -1128,7 +1141,7 @@ export default class TagsInput extends BaseComponent {
         if (!this.node) {
             return;
         }
-        this.#searchInput.value = '';
+        $.setValue(this.#searchInput, '');
         this.#refreshPlaceholder();
         if (!this.node) {
             return;
@@ -1169,9 +1182,9 @@ export default class TagsInput extends BaseComponent {
         this.#value = values;
         const lookup = new Map();
         for (const option of this.node.options) {
-            option.selected = false;
-            if (!lookup.has(option.value)) {
-                lookup.set(option.value, option);
+            $.setProperty(option, { selected: false });
+            if (!lookup.has($.getValue(option))) {
+                lookup.set($.getValue(option), option);
             }
         }
         for (const entry of values) {
@@ -1181,7 +1194,7 @@ export default class TagsInput extends BaseComponent {
                 this.#generatedOptions.add(option);
                 this.node.append(option);
             }
-            option.selected = true;
+            $.setProperty(option, { selected: true });
         }
         for (const option of this.#generatedOptions) {
             if (!this.node.contains(option) || !option.selected && !option.defaultSelected) {
@@ -1221,7 +1234,7 @@ export default class TagsInput extends BaseComponent {
      */
     #updateSearchWidth() {
         const span = $.create('span', {
-            text: this.#searchInput.value,
+            text: $.getValue(this.#searchInput),
             style: {
                 position: 'absolute',
                 visibility: 'hidden',
