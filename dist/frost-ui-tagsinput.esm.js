@@ -144,7 +144,7 @@ var TagsInput = class extends BaseComponent {
 			const search = normalizeText(term);
 			return first.indexOf(search) - second.indexOf(search) || first.localeCompare(second);
 		},
-		validTag: (value) => !!value,
+		validTag: (value) => Boolean(value),
 		trimValue: false,
 		maxSelections: 0,
 		minSearch: 1,
@@ -401,7 +401,7 @@ var TagsInput = class extends BaseComponent {
 		if (this.#dispatching) return false;
 		this.#dispatching = true;
 		try {
-			return $.triggerOne(this.node, `${name}.ui.tagsinput`) && !!this.node;
+			return $.triggerOne(this.node, `${name}.ui.tagsinput`) && Boolean(this.node);
 		} finally {
 			this.#dispatching = false;
 		}
@@ -630,7 +630,7 @@ var TagsInput = class extends BaseComponent {
 			if (!request.offset) this.#clearResults();
 			else $.remove($.children(this.#menuNode, "[role=\"status\"]"));
 			this.#offset = request.offset + response.results.length;
-			this.#showMore = !!response.showMore && response.results.length > 0;
+			this.#showMore = Boolean(response.showMore) && response.results.length > 0;
 			this.#renderResults(normalizeValues(response.results), id);
 		} catch {
 			if (this.node && id === this.#requestId) {
@@ -788,7 +788,7 @@ var TagsInput = class extends BaseComponent {
 		const html = this.options.sanitize.call(this, this.#placeholderText || "&nbsp;");
 		if (!this.node) return;
 		$.setHtml(this.#placeholder, html);
-		this.#placeholder.hidden = !!this.#value.length || !!$.getValue(this.#searchInput) || this.node.ownerDocument.activeElement === this.#searchInput;
+		this.#placeholder.hidden = Boolean(this.#value.length) || Boolean($.getValue(this.#searchInput)) || this.node.ownerDocument.activeElement === this.#searchInput;
 	}
 	/**
 	* Synchronizes editor attributes, styling, and disabled state.
@@ -889,7 +889,7 @@ var TagsInput = class extends BaseComponent {
 			if (!this.node) return false;
 			$.setHtml(element, html);
 		} else if ($._isElement(content) && content !== element) $.append(element, content);
-		return !!this.node;
+		return Boolean(this.node);
 	}
 	/**
 	* Appends a sanitized status message.

@@ -117,7 +117,7 @@ export default class TagsInput extends BaseComponent {
 
             return first.indexOf(search) - second.indexOf(search) || first.localeCompare(second);
         },
-        validTag: (value) => !!value,
+        validTag: (value) => Boolean(value),
         trimValue: false,
         maxSelections: 0,
         minSearch: 1,
@@ -441,7 +441,7 @@ export default class TagsInput extends BaseComponent {
         }
         this.#dispatching = true;
         try {
-            return $.triggerOne(this.node, `${name}.ui.tagsinput`) && !!this.node;
+            return $.triggerOne(this.node, `${name}.ui.tagsinput`) && Boolean(this.node);
         } finally {
             this.#dispatching = false;
         }
@@ -734,7 +734,7 @@ export default class TagsInput extends BaseComponent {
                 $.remove($.children(this.#menuNode, '[role="status"]'));
             }
             this.#offset = request.offset + response.results.length;
-            this.#showMore = !!response.showMore && response.results.length > 0;
+            this.#showMore = Boolean(response.showMore) && response.results.length > 0;
             this.#renderResults(normalizeValues(response.results), id);
         } catch {
             if (this.node && id === this.#requestId) {
@@ -936,7 +936,7 @@ export default class TagsInput extends BaseComponent {
             return;
         }
         $.setHtml(this.#placeholder, html);
-        this.#placeholder.hidden = !!this.#value.length || !!$.getValue(this.#searchInput) || this.node.ownerDocument.activeElement === this.#searchInput;
+        this.#placeholder.hidden = Boolean(this.#value.length) || Boolean($.getValue(this.#searchInput)) || this.node.ownerDocument.activeElement === this.#searchInput;
     }
 
     /**
@@ -1046,7 +1046,7 @@ export default class TagsInput extends BaseComponent {
         } else if ($._isElement(content) && content !== element) {
             $.append(element, content);
         }
-        return !!this.node;
+        return Boolean(this.node);
     }
 
     /**

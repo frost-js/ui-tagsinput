@@ -176,7 +176,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 				const search = normalizeText(term);
 				return first.indexOf(search) - second.indexOf(search) || first.localeCompare(second);
 			},
-			validTag: (value) => !!value,
+			validTag: (value) => Boolean(value),
 			trimValue: false,
 			maxSelections: 0,
 			minSearch: 1,
@@ -433,7 +433,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			if (this.#dispatching) return false;
 			this.#dispatching = true;
 			try {
-				return _fr0st_query.default.triggerOne(this.node, `${name}.ui.tagsinput`) && !!this.node;
+				return _fr0st_query.default.triggerOne(this.node, `${name}.ui.tagsinput`) && Boolean(this.node);
 			} finally {
 				this.#dispatching = false;
 			}
@@ -662,7 +662,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 				if (!request.offset) this.#clearResults();
 				else _fr0st_query.default.remove(_fr0st_query.default.children(this.#menuNode, "[role=\"status\"]"));
 				this.#offset = request.offset + response.results.length;
-				this.#showMore = !!response.showMore && response.results.length > 0;
+				this.#showMore = Boolean(response.showMore) && response.results.length > 0;
 				this.#renderResults(normalizeValues(response.results), id);
 			} catch {
 				if (this.node && id === this.#requestId) {
@@ -820,7 +820,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			const html = this.options.sanitize.call(this, this.#placeholderText || "&nbsp;");
 			if (!this.node) return;
 			_fr0st_query.default.setHtml(this.#placeholder, html);
-			this.#placeholder.hidden = !!this.#value.length || !!_fr0st_query.default.getValue(this.#searchInput) || this.node.ownerDocument.activeElement === this.#searchInput;
+			this.#placeholder.hidden = Boolean(this.#value.length) || Boolean(_fr0st_query.default.getValue(this.#searchInput)) || this.node.ownerDocument.activeElement === this.#searchInput;
 		}
 		/**
 		* Synchronizes editor attributes, styling, and disabled state.
@@ -921,7 +921,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 				if (!this.node) return false;
 				_fr0st_query.default.setHtml(element, html);
 			} else if (_fr0st_query.default._isElement(content) && content !== element) _fr0st_query.default.append(element, content);
-			return !!this.node;
+			return Boolean(this.node);
 		}
 		/**
 		* Appends a sanitized status message.
