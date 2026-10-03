@@ -2,16 +2,18 @@ import { expect, test } from '#test';
 
 test.describe('TagsInput forms', () => {
     test.beforeEach(async ({ page }) => {
-        await page.evaluate((_) => {
-            document.body.innerHTML = '<form id="form"><fieldset><label for="tags">Fruit</label>' +
+        await page.evaluate(() => {
+            $.setHtml(document.body,
+                '<form id="form"><fieldset><label for="tags">Fruit</label>' +
                 '<select id="tags" multiple name="fruit" class="input-outline">' +
                 '<option value="Apple" selected>Apple label</option><option value="Banana">Banana label</option>' +
                 '</select></fieldset><button type="reset">Reset</button>' +
-                '<button type="submit">Submit</button></form><button id="outside">Outside</button>';
+                '<button type="submit">Submit</button></form><button id="outside">Outside</button>',
+            );
             window.changes = 0;
             window.submits = 0;
-            $.addEvent('#tags', 'change.ui.tagsinput', (_) => window.changes++);
-            document.querySelector('#form').addEventListener('submit', (event) => {
+            $.addEvent('#tags', 'change.ui.tagsinput', () => window.changes++);
+            $.findOne('#form').addEventListener('submit', (event) => {
                 event.preventDefault();
                 window.submits++;
             });
@@ -20,8 +22,8 @@ test.describe('TagsInput forms', () => {
 
     test.describe('native synchronization', () => {
         test('synchronizes external native changes without duplicating events', async ({ page }) => {
-            await page.evaluate((_) => {
-                const node = document.querySelector('#tags');
+            await page.evaluate(() => {
+                const node = $.findOne('#tags');
                 UI.TagsInput.init(node, { minSearch: 0 });
                 node.add(new Option('Cherry label', 'Cherry'));
                 node.value = 'Cherry';
@@ -29,9 +31,9 @@ test.describe('TagsInput forms', () => {
             });
             await expect(page.locator('.tagsinput-selection')).toHaveText(['Cherry']);
             await expect(page.locator('#tags option')).toHaveText(['Apple label', 'Banana label', 'Cherry label']);
-            expect(await page.evaluate((_) => $('#tags').tagsinput('getValue'))).toEqual(['Cherry']);
-            expect(await page.evaluate((_) => window.changes)).toBe(1);
-            await page.evaluate((_) => $('#tags').tagsinput('show'));
+            expect(await page.evaluate(() => $('#tags').tagsinput('getValue'))).toEqual(['Cherry']);
+            expect(await page.evaluate(() => window.changes)).toBe(1);
+            await page.evaluate(() => $('#tags').tagsinput('show'));
             await expect(page.getByRole('option')).toHaveText(['Apple', 'Banana', 'Cherry']);
             await expect(page.getByRole('option', { name: 'Cherry', exact: true })).toHaveAttribute('aria-selected', 'true');
         });
@@ -43,7 +45,7 @@ test.describe('TagsInput forms', () => {
         ]) {
             test(`preserves pending option changes when setting values (${action})`, async ({ page }) => {
                 await page.evaluate((action) => {
-                    const node = document.querySelector('#tags');
+                    const node = $.findOne('#tags');
                     const instance = UI.TagsInput.init(node, { minSearch: 0 });
                     if (action === 'add') {
                         node.add(new Option('Cherry label', 'Cherry'));
@@ -57,13 +59,13 @@ test.describe('TagsInput forms', () => {
                 }, action);
                 await expect(page.getByRole('option')).toHaveText(expected);
                 await expect(page.locator('#tags')).toHaveValues(['Apple']);
-                expect(await page.evaluate((_) => window.changes)).toBe(0);
+                expect(await page.evaluate(() => window.changes)).toBe(0);
             });
         }
 
         test('keeps explicit suggestion data when native options change', async ({ page }) => {
-            await page.evaluate((_) => {
-                const node = document.querySelector('#tags');
+            await page.evaluate(() => {
+                const node = $.findOne('#tags');
                 const instance = UI.TagsInput.init(node, { data: ['Custom'], minSearch: 0 });
                 node.add(new Option('Cherry label', 'Cherry'));
                 instance.setValue('Cherry');
@@ -71,24 +73,24 @@ test.describe('TagsInput forms', () => {
             });
             await expect(page.getByRole('option')).toHaveText(['Custom']);
             await expect(page.locator('#tags')).toHaveValues(['Cherry']);
-            expect(await page.evaluate((_) => window.changes)).toBe(0);
+            expect(await page.evaluate(() => window.changes)).toBe(0);
         });
 
         test('observes added and removed native options', async ({ page }) => {
-            await page.evaluate((_) => {
-                const node = document.querySelector('#tags');
+            await page.evaluate(() => {
+                const node = $.findOne('#tags');
                 UI.TagsInput.init(node);
                 node.add(new Option('Cherry label', 'Cherry', false, true));
             });
             await expect(page.locator('.tagsinput-selection')).toHaveText(['Apple', 'Cherry']);
-            await page.evaluate((_) => document.querySelector('#tags option[value="Apple"]').remove());
+            await page.evaluate(() => $.findOne('#tags option[value="Apple"]').remove());
             await expect(page.locator('.tagsinput-selection')).toHaveText(['Cherry']);
-            expect(await page.evaluate((_) => window.changes)).toBe(0);
+            expect(await page.evaluate(() => window.changes)).toBe(0);
         });
 
         test('updates accessible labels, descriptions, and error references', async ({ page }) => {
-            await page.evaluate((_) => {
-                const node = document.querySelector('#tags');
+            await page.evaluate(() => {
+                const node = $.findOne('#tags');
                 UI.TagsInput.init(node);
                 node.setAttribute('aria-label', 'Favorite fruit');
                 node.setAttribute('aria-describedby', 'help');
@@ -99,8 +101,8 @@ test.describe('TagsInput forms', () => {
             await expect(control).toHaveAttribute('aria-describedby', 'help');
             await expect(control).toHaveAttribute('aria-errormessage', 'error');
             await expect(control).toHaveAttribute('aria-invalid', 'true');
-            await page.evaluate((_) => {
-                const node = document.querySelector('#tags');
+            await page.evaluate(() => {
+                const node = $.findOne('#tags');
                 node.removeAttribute('aria-describedby');
                 node.removeAttribute('aria-errormessage');
                 node.removeAttribute('aria-invalid');
@@ -113,44 +115,44 @@ test.describe('TagsInput forms', () => {
 
     test.describe('submission', () => {
         test('updates FormData without emitting changes or replacing defaults', async ({ page }) => {
-            await page.evaluate((_) => UI.TagsInput.init(document.querySelector('#tags')).setValue(['Banana', 'New']));
-            expect(await page.evaluate((_) => new FormData(document.querySelector('#form')).getAll('fruit'))).toEqual(['Banana', 'New']);
-            expect(await page.evaluate((_) => window.changes)).toBe(0);
+            await page.evaluate(() => UI.TagsInput.init($.findOne('#tags')).setValue(['Banana', 'New']));
+            expect(await page.evaluate(() => new FormData($.findOne('#form')).getAll('fruit'))).toEqual(['Banana', 'New']);
+            expect(await page.evaluate(() => window.changes)).toBe(0);
             await expect(page.locator('#tags option').first()).toHaveAttribute('selected', '');
         });
 
         test('excludes a disabled native control from FormData', async ({ page }) => {
-            await page.evaluate((_) => UI.TagsInput.init(document.querySelector('#tags')).disable());
-            expect(await page.evaluate((_) => new FormData(document.querySelector('#form')).has('fruit'))).toBe(false);
+            await page.evaluate(() => UI.TagsInput.init($.findOne('#tags')).disable());
+            expect(await page.evaluate(() => new FormData($.findOne('#form')).has('fruit'))).toBe(false);
         });
 
         for (const value of ['Banana', 'New']) {
             test(`prevents Enter from submitting while confirming ${value}`, async ({ page }) => {
-                await page.evaluate((_) => UI.TagsInput.init(document.querySelector('#tags')));
+                await page.evaluate(() => UI.TagsInput.init($.findOne('#tags')));
                 await page.getByRole('combobox').fill(value);
                 await page.getByRole('combobox').press('Enter');
                 await expect(page.locator('#tags')).toHaveValues(['Apple', value]);
-                expect(await page.evaluate((_) => window.submits)).toBe(0);
-                expect(await page.evaluate((_) => window.changes)).toBe(1);
+                expect(await page.evaluate(() => window.submits)).toBe(0);
+                expect(await page.evaluate(() => window.changes)).toBe(1);
                 await page.getByRole('button', { name: 'Submit', exact: true }).click();
-                expect(await page.evaluate((_) => window.submits)).toBe(1);
+                expect(await page.evaluate(() => window.submits)).toBe(1);
             });
         }
     });
 
     test.describe('validation', () => {
         test('preserves native required validation and redirects invalid focus', async ({ page }) => {
-            await page.evaluate((_) => {
-                const node = document.querySelector('#tags');
-                node.required = true;
+            await page.evaluate(() => {
+                const node = $.findOne('#tags');
+                $.setProperty(node, 'required', true);
                 UI.TagsInput.init(node).removeAll();
             });
             expect(await page.locator('#tags').evaluate((node) => node.validity.valueMissing)).toBe(true);
             await page.getByRole('button', { name: 'Submit', exact: true }).click();
             await expect(page.getByRole('combobox')).toBeFocused();
             await expect(page.getByRole('combobox')).toHaveAttribute('aria-invalid', 'true');
-            expect(await page.evaluate((_) => window.submits)).toBe(0);
-            await page.evaluate((_) => $('#tags').tagsinput('setValue', 'Banana'));
+            expect(await page.evaluate(() => window.submits)).toBe(0);
+            await page.evaluate(() => $('#tags').tagsinput('setValue', 'Banana'));
             await expect(page.getByRole('combobox')).not.toHaveAttribute('aria-invalid');
             expect(await page.locator('#tags').evaluate((node) => node.checkValidity())).toBe(true);
         });
@@ -160,8 +162,8 @@ test.describe('TagsInput forms', () => {
         for (const selector of ['#tags', 'fieldset']) {
             test(`tracks native disabled state (${selector})`, async ({ page }) => {
                 await page.evaluate((selector) => {
-                    UI.TagsInput.init(document.querySelector('#tags'), { minSearch: 0 }).show();
-                    document.querySelector(selector).disabled = true;
+                    UI.TagsInput.init($.findOne('#tags'), { minSearch: 0 }).show();
+                    $.setProperty($.findOne(selector), 'disabled', true);
                 }, selector);
                 await expect(page.getByRole('combobox')).toBeDisabled();
                 await expect(page.getByRole('button', { name: 'Remove selection: Apple' })).toBeDisabled();
@@ -169,28 +171,28 @@ test.describe('TagsInput forms', () => {
                 await page.getByRole('combobox').dispatchEvent('keydown', { key: 'Backspace' });
                 await page.getByRole('button', { name: 'Remove selection: Apple' }).dispatchEvent('click');
                 await expect(page.locator('#tags')).toHaveValues(['Apple']);
-                expect(await page.evaluate((_) => window.changes)).toBe(0);
-                await page.evaluate((selector) => document.querySelector(selector).disabled = false, selector);
+                expect(await page.evaluate(() => window.changes)).toBe(0);
+                await page.evaluate((selector) => $.setProperty($.findOne(selector), 'disabled', false), selector);
                 await expect(page.getByRole('combobox')).toBeEnabled();
             });
         }
 
         test('honors an initially disabled fieldset even after calling enable', async ({ page }) => {
-            await page.evaluate((_) => {
-                document.querySelector('fieldset').disabled = true;
-                const instance = UI.TagsInput.init(document.querySelector('#tags'));
+            await page.evaluate(() => {
+                $.setProperty($.findOne('fieldset'), 'disabled', true);
+                const instance = UI.TagsInput.init($.findOne('#tags'));
                 instance.enable();
                 instance.show();
             });
             await expect(page.getByRole('combobox')).toBeDisabled();
             await expect(page.getByRole('combobox')).toHaveAttribute('aria-expanded', 'false');
-            await page.evaluate((_) => document.querySelector('fieldset').disabled = false);
+            await page.evaluate(() => $.setProperty($.findOne('fieldset'), 'disabled', false));
             await expect(page.getByRole('combobox')).toBeEnabled();
         });
 
         test('closes a disabled control even when hide is canceled', async ({ page }) => {
-            await page.evaluate((_) => {
-                const instance = UI.TagsInput.init(document.querySelector('#tags'), { minSearch: 0 });
+            await page.evaluate(() => {
+                const instance = UI.TagsInput.init($.findOne('#tags'), { minSearch: 0 });
                 instance.show();
                 $.addEvent('#tags', 'hide.ui.tagsinput', (event) => event.preventDefault());
                 instance.disable();
@@ -202,8 +204,8 @@ test.describe('TagsInput forms', () => {
 
     test.describe('reset', () => {
         test('restores default selections silently and removes generated tags', async ({ page }) => {
-            await page.evaluate((_) => {
-                const instance = UI.TagsInput.init(document.querySelector('#tags'));
+            await page.evaluate(() => {
+                const instance = UI.TagsInput.init($.findOne('#tags'));
                 instance.setValue(['Banana', 'New']);
                 instance.show();
             });
@@ -212,12 +214,12 @@ test.describe('TagsInput forms', () => {
             await expect(page.locator('.tagsinput-selection')).toHaveText(['Apple']);
             await expect(page.locator('#tags option')).toHaveCount(2);
             await expect(page.locator('.tagsinput-menu')).toHaveCount(0);
-            expect(await page.evaluate((_) => window.changes)).toBe(0);
+            expect(await page.evaluate(() => window.changes)).toBe(0);
         });
 
         test('resets an initially empty select without retaining generated options', async ({ page }) => {
-            await page.evaluate((_) => {
-                const node = document.querySelector('#tags');
+            await page.evaluate(() => {
+                const node = $.findOne('#tags');
                 node.replaceChildren();
                 UI.TagsInput.init(node).setValue('New');
             });
@@ -228,9 +230,9 @@ test.describe('TagsInput forms', () => {
         });
 
         test('does not synchronize a canceled reset', async ({ page }) => {
-            await page.evaluate((_) => {
-                UI.TagsInput.init(document.querySelector('#tags')).setValue('Banana');
-                document.querySelector('#form').addEventListener('reset', (event) => event.preventDefault());
+            await page.evaluate(() => {
+                UI.TagsInput.init($.findOne('#tags')).setValue('Banana');
+                $.findOne('#form').addEventListener('reset', (event) => event.preventDefault());
             });
             await page.getByRole('button', { name: 'Reset', exact: true }).click();
             await expect(page.locator('#tags')).toHaveValues(['Banana']);
@@ -238,9 +240,9 @@ test.describe('TagsInput forms', () => {
         });
 
         test('rebinds reset handling when the external form owner changes', async ({ page }) => {
-            await page.evaluate((_) => {
+            await page.evaluate(() => {
                 document.body.insertAdjacentHTML('beforeend', '<form id="second"><button type="reset">Second reset</button></form>');
-                const node = document.querySelector('#tags');
+                const node = $.findOne('#tags');
                 const instance = UI.TagsInput.init(node);
                 node.setAttribute('form', 'second');
                 instance.setValue('Banana');
@@ -251,9 +253,9 @@ test.describe('TagsInput forms', () => {
         });
 
         test('clears an unconfirmed search on reset', async ({ page }) => {
-            await page.evaluate((_) => UI.TagsInput.init(document.querySelector('#tags')));
+            await page.evaluate(() => UI.TagsInput.init($.findOne('#tags')));
             await page.getByRole('combobox').fill('Banana');
-            await page.evaluate((_) => document.querySelector('#form').reset());
+            await page.evaluate(() => $.findOne('#form').reset());
             await expect(page.getByRole('combobox')).toHaveValue('');
             await expect(page.getByRole('combobox')).toHaveAttribute('aria-expanded', 'false');
         });
@@ -261,7 +263,7 @@ test.describe('TagsInput forms', () => {
 
     test.describe('keyboard navigation', () => {
         test('keeps unconfirmed text when focus moves to a removal button', async ({ page }) => {
-            await page.evaluate((_) => UI.TagsInput.init(document.querySelector('#tags')).setValue(['Apple', 'Banana']));
+            await page.evaluate(() => UI.TagsInput.init($.findOne('#tags')).setValue(['Apple', 'Banana']));
             await page.getByRole('combobox').fill('New');
             await page.getByRole('combobox').press('Shift+Tab');
             await expect(page.getByRole('button', { name: 'Remove selection: Banana' })).toBeFocused();
@@ -271,15 +273,15 @@ test.describe('TagsInput forms', () => {
 
     test.describe('disposal', () => {
         test('does not remove another instance or consumer change listeners', async ({ page }) => {
-            await page.evaluate((_) => {
-                document.body.insertAdjacentHTML('beforeend', '<select id="second" multiple><option>Other</option></select>');
-                UI.TagsInput.init(document.querySelector('#tags'));
-                UI.TagsInput.init(document.querySelector('#second'), { minSearch: 0 });
+            await page.evaluate(() => {
+                $.append(document.body, '<select id="second" multiple><option>Other</option></select>');
+                UI.TagsInput.init($.findOne('#tags'));
+                UI.TagsInput.init($.findOne('#second'), { minSearch: 0 });
                 $('#tags').tagsinput('dispose');
                 $.triggerEvent('#tags', 'change.ui.tagsinput');
                 $('#second').tagsinput('show');
             });
-            expect(await page.evaluate((_) => window.changes)).toBe(1);
+            expect(await page.evaluate(() => window.changes)).toBe(1);
             await expect(page.getByRole('option', { name: 'Other' })).toBeVisible();
             await page.locator('#outside').click();
             await expect(page.locator('.tagsinput-menu')).toHaveCount(0);

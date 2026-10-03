@@ -2,11 +2,13 @@ import { expect, test } from '#test';
 
 test.describe('TagsInput styles', () => {
     test.beforeEach(async ({ page }) => {
-        await page.evaluate((_) => {
-            document.body.innerHTML = '<button id="outside">Outside</button><div id="host" style="width:260px">' +
+        await page.evaluate(() => {
+            $.setHtml(document.body,
+                '<button id="outside">Outside</button><div id="host" style="width:260px">' +
                 '<label for="tags">Fruit</label><select id="tags" multiple class="input-outline">' +
                 '<option value="Apple" selected>Apple label</option><option value="Banana">Banana label</option>' +
-                '</select></div>';
+                '</select></div>',
+            );
         });
     });
 
@@ -20,12 +22,12 @@ test.describe('TagsInput styles', () => {
                 test.describe(`${style}, size=${size || 'default'}`, () => {
                     test.beforeEach(async ({ page }) => {
                         await page.evaluate(({ style, size }) => {
-                            const node = document.querySelector('#tags');
-                            node.className = `input-${style}${size ? ` input-${size}` : ''}`;
-                            const reference = document.createElement('input');
-                            reference.id = 'reference';
-                            reference.className = node.className;
-                            document.querySelector('#host').append(reference);
+                            const node = $.findOne('#tags');
+                            $.setAttribute(node, 'class', `input-${style}${size ? ` input-${size}` : ''}`);
+                            const reference = $.create('input');
+                            $.setProperty(reference, 'id', 'reference');
+                            $.setAttribute(reference, 'class', $.getProperty(node, 'className'));
+                            $.append($.findOne('#host'), reference);
                             UI.TagsInput.init(node, { minSearch: 0 });
                         }, { style, size });
                     });
@@ -43,7 +45,7 @@ test.describe('TagsInput styles', () => {
                     });
 
                     test('inherits the editor font and keeps an empty control at the UI input height', async ({ page }) => {
-                        await page.evaluate((_) => $('#tags').tagsinput('removeAll'));
+                        await page.evaluate(() => $('#tags').tagsinput('removeAll'));
                         await expect(page.getByRole('combobox')).toHaveCSS('font-size', fontSize);
                         const height = await page.locator('#reference').evaluate((node) => getComputedStyle(node).height);
                         await expect(page.locator('.tagsinput')).toHaveCSS('height', height);
@@ -57,7 +59,7 @@ test.describe('TagsInput styles', () => {
         for (const direction of ['ltr', 'rtl']) {
             test(`keeps chips and removal buttons inside a narrow control (${direction})`, async ({ page }) => {
                 await page.evaluate((direction) => {
-                    const node = document.querySelector('#tags');
+                    const node = $.findOne('#tags');
                     node.dir = direction;
                     UI.TagsInput.init(node).setValue(['An extremely long tag '.repeat(20), 'Banana']);
                 }, direction);
@@ -79,8 +81,8 @@ test.describe('TagsInput styles', () => {
         for (const display of ['grid', 'flex']) {
             test(`measures search text independently of a ${display} page layout`, async ({ page }) => {
                 await page.evaluate((display) => {
-                    document.body.style.cssText = `display:${display};grid-template-columns:320px`;
-                    UI.TagsInput.init(document.querySelector('#tags'));
+                    $.setAttribute(document.body, 'style', `display:${display};grid-template-columns:320px`);
+                    UI.TagsInput.init($.findOne('#tags'));
                 }, display);
                 await page.getByRole('combobox').fill('Long search '.repeat(30));
                 const control = page.locator('.tagsinput');
@@ -93,7 +95,7 @@ test.describe('TagsInput styles', () => {
 
     test.describe('menu sizing and overflow', () => {
         test('wraps long results and constrains the scrollable menu', async ({ page }) => {
-            await page.evaluate((_) => UI.TagsInput.init(document.querySelector('#tags'), {
+            await page.evaluate(() => UI.TagsInput.init($.findOne('#tags'), {
                 fullWidth: true, maxHeight: '70px', minSearch: 0,
                 data: Array.from({ length: 10 }, (_, index) => `${index}: ${'x'.repeat(200)}`),
             }).show());
@@ -109,11 +111,11 @@ test.describe('TagsInput styles', () => {
             test.describe(`${style}, nested=${nested}`, () => {
                 test.beforeEach(async ({ page }) => {
                     await page.evaluate(({ style, nested }) => {
-                        const host = document.querySelector('#host');
+                        const host = $.findOne('#host');
                         const select = `<select id="tags" multiple class="input-${style} input-floating"><option selected>Apple</option></select>`;
                         const field = nested ? `<div class="form-input">${select}<label for="tags" class="label-floating">Fruit</label></div>` : select;
-                        host.innerHTML = `<div class="input-group input-group-sm"><span class="input-group-text">@</span>${field}<button class="btn">Go</button></div>`;
-                        UI.TagsInput.init(document.querySelector('#tags'), { minSearch: 0 });
+                        $.setHtml(host, `<div class="input-group input-group-sm"><span class="input-group-text">@</span>${field}<button class="btn">Go</button></div>`);
+                        UI.TagsInput.init($.findOne('#tags'), { minSearch: 0 });
                     }, { style, nested });
                 });
 
@@ -146,10 +148,12 @@ test.describe('TagsInput styles', () => {
         }
 
         test('retains the starting radius when the native select is the first input-group child', async ({ page }) => {
-            await page.evaluate((_) => {
-                document.querySelector('#host').innerHTML = '<div class="input-group"><select id="tags" multiple class="input-outline">' +
-                    '<option selected>Apple</option></select><button class="btn">Go</button></div>';
-                UI.TagsInput.init(document.querySelector('#tags'));
+            await page.evaluate(() => {
+                $.setHtml($.findOne('#host'),
+                    '<div class="input-group"><select id="tags" multiple class="input-outline">' +
+                    '<option selected>Apple</option></select><button class="btn">Go</button></div>',
+                );
+                UI.TagsInput.init($.findOne('#tags'));
             });
             const radius = await page.locator('.input-group').evaluate((node) => getComputedStyle(node).borderTopLeftRadius);
             await expect(page.locator('.tagsinput')).toHaveCSS('border-top-left-radius', radius);
@@ -162,11 +166,11 @@ test.describe('TagsInput styles', () => {
             for (const direction of ['ltr', 'rtl']) {
                 test(`preserves the label above the selected tags (${style}, ${direction})`, async ({ page }) => {
                     await page.evaluate(({ style, direction }) => {
-                        document.querySelector('#host').innerHTML = `<div class="input-group" dir="${direction}">` +
+                        $.setHtml($.findOne('#host'), `<div class="input-group" dir="${direction}">` +
                             '<span class="input-group-text">Fruit</span><div class="form-input">' +
                             `<select id="tags" multiple class="input-${style} input-floating"><option selected>Apple</option></select>` +
-                            '<label for="tags" class="label-floating">Favorite fruit</label></div></div>';
-                        UI.TagsInput.init(document.querySelector('#tags'), { minSearch: 0 });
+                            '<label for="tags" class="label-floating">Favorite fruit</label></div></div>');
+                        UI.TagsInput.init($.findOne('#tags'), { minSearch: 0 });
                     }, { style, direction });
                     const control = page.getByRole('combobox', { name: 'Favorite fruit' });
                     const label = page.locator('.label-floating');
@@ -176,9 +180,9 @@ test.describe('TagsInput styles', () => {
                         const range = document.createRange();
                         range.selectNodeContents(node);
                         const text = range.getBoundingClientRect();
-                        node.style.pointerEvents = 'auto';
+                        $.setStyle(node, 'pointerEvents', 'auto');
                         const visible = document.elementFromPoint(text.x + text.width / 2, text.y + text.height / 2) === node;
-                        node.style.removeProperty('pointer-events');
+                        $.removeStyle(node, 'pointer-events');
                         return visible;
                     })).toBe(true);
                     await control.press('Escape');
@@ -196,18 +200,18 @@ test.describe('TagsInput styles', () => {
             test.describe(style, () => {
                 test.beforeEach(async ({ page }) => {
                     await page.evaluate((style) => {
-                        const node = document.querySelector('#tags');
-                        node.className = `input-${style}`;
+                        const node = $.findOne('#tags');
+                        $.setAttribute(node, 'class', `input-${style}`);
                         UI.TagsInput.init(node);
-                        const reference = document.createElement('input');
-                        reference.id = 'reference';
-                        reference.className = `input-${style}`;
-                        document.querySelector('#host').append(reference);
+                        const reference = $.create('input');
+                        $.setProperty(reference, 'id', 'reference');
+                        $.setAttribute(reference, 'class', `input-${style}`);
+                        $.append($.findOne('#host'), reference);
                     }, style);
                 });
 
                 test('matches UI focus styling and clears focus on blur', async ({ page }) => {
-                    await page.evaluate((_) => document.querySelector('#reference').classList.add('focus'));
+                    await page.evaluate(() => $.addClass($.findOne('#reference'), 'focus'));
                     await page.getByRole('combobox').focus();
                     const toggle = page.locator('.tagsinput');
                     await expect(toggle).toHaveClass(/focus/);
@@ -218,7 +222,7 @@ test.describe('TagsInput styles', () => {
                 });
 
                 test('matches UI validation styling', async ({ page }) => {
-                    await page.evaluate((_) => document.querySelector('#host').classList.add('form-error'));
+                    await page.evaluate(() => $.addClass($.findOne('#host'), 'form-error'));
                     for (const property of ['background-color', 'border-color']) {
                         const value = await page.locator('#reference').evaluate((node, property) => getComputedStyle(node).getPropertyValue(property), property);
                         await expect(page.locator('.tagsinput')).toHaveCSS(property, value);
@@ -228,9 +232,9 @@ test.describe('TagsInput styles', () => {
                 for (const invalid of [false, true]) {
                     test(`matches UI disabled styling (invalid=${invalid})`, async ({ page }) => {
                         await page.evaluate((invalid) => {
-                            document.querySelector('#host').classList.toggle('form-error', invalid);
+                            $.findOne('#host').classList.toggle('form-error', invalid);
                             $('#tags').tagsinput('disable');
-                            document.querySelector('#reference').disabled = true;
+                            $.setProperty($.findOne('#reference'), 'disabled', true);
                         }, invalid);
                         await expect(page.getByRole('combobox')).toBeDisabled();
                         const color = await page.locator('#reference').evaluate((node) => getComputedStyle(node).backgroundColor);
@@ -245,8 +249,8 @@ test.describe('TagsInput styles', () => {
         for (const direction of ['ltr', 'rtl']) {
             test(`matches the reference width when appended to body (${direction})`, async ({ page }) => {
                 await page.evaluate((direction) => {
-                    document.querySelector('#tags').dir = direction;
-                    UI.TagsInput.init(document.querySelector('#tags'), {
+                    $.setProperty($.findOne('#tags'), 'dir', direction);
+                    UI.TagsInput.init($.findOne('#tags'), {
                         minSearch: 0, fullWidth: true, appendTo: document.body,
                     }).show();
                 }, direction);
@@ -262,13 +266,17 @@ test.describe('TagsInput styles', () => {
 
     test.describe('modal integration', () => {
         test('keeps the editor and menu usable inside a UI modal', async ({ page }) => {
-            await page.evaluate((_) => {
-                document.body.innerHTML = '<div id="modal" class="modal" tabindex="-1"><div class="modal-dialog">' +
+            await page.evaluate(() => {
+                $.setHtml(document.body,
+                    '<div id="modal" class="modal" tabindex="-1"><div class="modal-dialog">' +
                     '<div class="modal-content"><div class="modal-body"><label for="tags">Fruit</label>' +
-                    '<select id="tags" multiple class="input-outline"><option selected>Apple</option><option>Banana</option></select>' +
-                    '</div></div></div></div>';
-                UI.TagsInput.init(document.querySelector('#tags'), { minSearch: 0, fullWidth: true });
-                UI.Modal.init(document.querySelector('#modal')).show();
+                    '<select id="tags" multiple class="input-outline">' +
+                    '<option selected>Apple</option>' +
+                    '<option>Banana</option></select>' +
+                    '</div></div></div></div>',
+                );
+                UI.TagsInput.init($.findOne('#tags'), { minSearch: 0, fullWidth: true });
+                UI.Modal.init($.findOne('#modal')).show();
             });
             await page.getByRole('combobox').click();
             await expect(page.getByRole('combobox')).toBeFocused();
