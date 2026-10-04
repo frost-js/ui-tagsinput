@@ -168,9 +168,9 @@ test.describe('TagsInput remote results', () => {
             await page.evaluate(() => window.requests[0].resolve({ results: ['Apple', 'Apple', 'Banana'], showMore: true }));
             await expect(page.getByRole('option')).toHaveText(['Apple', 'Banana']);
             await page.getByRole('listbox').evaluate((node) => {
-                node.scrollTop = node.scrollHeight;
-                node.dispatchEvent(new Event('scroll'));
-                node.dispatchEvent(new Event('scroll'));
+                $.setScrollY(node, $.height(node, { boxSize: $.SCROLL_BOX }));
+                $.triggerEvent(node, 'scroll', { bubbles: false, cancelable: false });
+                $.triggerEvent(node, 'scroll', { bubbles: false, cancelable: false });
             });
             await page.clock.runFor(251);
             expect(await page.evaluate(() => window.requests.length)).toBe(2);

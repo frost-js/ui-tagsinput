@@ -92,10 +92,12 @@ test.describe('TagsInput forms', () => {
             await page.evaluate(() => {
                 const node = $.findOne('#tags');
                 UI.TagsInput.init(node);
-                node.setAttribute('aria-label', 'Favorite fruit');
-                node.setAttribute('aria-describedby', 'help');
-                node.setAttribute('aria-errormessage', 'error');
-                node.setAttribute('aria-invalid', 'true');
+                $.setAttribute(node, {
+                    'aria-label': 'Favorite fruit',
+                    'aria-describedby': 'help',
+                    'aria-errormessage': 'error',
+                    'aria-invalid': 'true',
+                });
             });
             const control = page.getByRole('combobox', { name: 'Favorite fruit' });
             await expect(control).toHaveAttribute('aria-describedby', 'help');
@@ -103,9 +105,9 @@ test.describe('TagsInput forms', () => {
             await expect(control).toHaveAttribute('aria-invalid', 'true');
             await page.evaluate(() => {
                 const node = $.findOne('#tags');
-                node.removeAttribute('aria-describedby');
-                node.removeAttribute('aria-errormessage');
-                node.removeAttribute('aria-invalid');
+                for (const attribute of ['aria-describedby', 'aria-errormessage', 'aria-invalid']) {
+                    $.removeAttribute(node, attribute);
+                }
             });
             await expect(control).not.toHaveAttribute('aria-describedby');
             await expect(control).not.toHaveAttribute('aria-errormessage');
@@ -220,7 +222,7 @@ test.describe('TagsInput forms', () => {
         test('resets an initially empty select without retaining generated options', async ({ page }) => {
             await page.evaluate(() => {
                 const node = $.findOne('#tags');
-                node.replaceChildren();
+                $.empty(node);
                 UI.TagsInput.init(node).setValue('New');
             });
             await page.getByRole('button', { name: 'Reset', exact: true }).click();
@@ -241,10 +243,10 @@ test.describe('TagsInput forms', () => {
 
         test('rebinds reset handling when the external form owner changes', async ({ page }) => {
             await page.evaluate(() => {
-                document.body.insertAdjacentHTML('beforeend', '<form id="second"><button type="reset">Second reset</button></form>');
+                $.append(document.body, '<form id="second"><button type="reset">Second reset</button></form>');
                 const node = $.findOne('#tags');
                 const instance = UI.TagsInput.init(node);
-                node.setAttribute('form', 'second');
+                $.setAttribute(node, 'form', 'second');
                 instance.setValue('Banana');
             });
             await page.getByRole('button', { name: 'Second reset' }).click();

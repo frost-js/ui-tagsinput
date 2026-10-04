@@ -90,8 +90,9 @@ test.describe('TagsInput', () => {
             await page.evaluate(() => {
                 const host = $.create('div');
                 $.setHtml(host, '<select multiple aria-label="Detached"><option selected>New</option></select>');
-                UI.TagsInput.init(host.firstChild);
-                document.body.replaceChildren(host);
+                UI.TagsInput.init($.child(host)[0]);
+                $.empty(document.body);
+                $.append(document.body, host);
             });
             await expect(page.getByRole('combobox', { name: 'Detached' })).toBeVisible();
             await expect(page.locator('.tagsinput-selection')).toHaveText(['New']);

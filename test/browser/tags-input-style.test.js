@@ -60,7 +60,7 @@ test.describe('TagsInput styles', () => {
             test(`keeps chips and removal buttons inside a narrow control (${direction})`, async ({ page }) => {
                 await page.evaluate((direction) => {
                     const node = $.findOne('#tags');
-                    node.dir = direction;
+                    $.setProperty(node, 'dir', direction);
                     UI.TagsInput.init(node).setValue(['An extremely long tag '.repeat(20), 'Banana']);
                 }, direction);
                 const control = page.locator('.tagsinput');
@@ -232,7 +232,11 @@ test.describe('TagsInput styles', () => {
                 for (const invalid of [false, true]) {
                     test(`matches UI disabled styling (invalid=${invalid})`, async ({ page }) => {
                         await page.evaluate((invalid) => {
-                            $.findOne('#host').classList.toggle('form-error', invalid);
+                            if (invalid) {
+                                $.addClass('#host', 'form-error');
+                            } else {
+                                $.removeClass('#host', 'form-error');
+                            }
                             $('#tags').tagsinput('disable');
                             $.setProperty($.findOne('#reference'), 'disabled', true);
                         }, invalid);

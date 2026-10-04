@@ -1,3 +1,15 @@
+import $ from '@fr0st/query';
+
+/**
+ * Checks whether a node is the parent itself or one of its descendants.
+ * @param {Node} parent The parent node.
+ * @param {Node|null} node The node to check.
+ * @returns {boolean} Whether the parent contains the node.
+ */
+export function containsNode(parent, node) {
+    return Boolean(node) && ($.isSame(parent, node) || $.hasDescendent(parent, node));
+}
+
 /**
  * Normalizes a selection limit to a nonnegative integer.
  * @param {number} value The requested limit.

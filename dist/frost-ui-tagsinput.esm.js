@@ -3,6 +3,15 @@ import $ from "@fr0st/query";
 
 //#region src/js/helpers.js
 /**
+* Checks whether a node is the parent itself or one of its descendants.
+* @param {Node} parent The parent node.
+* @param {Node|null} node The node to check.
+* @returns {boolean} Whether the parent contains the node.
+*/
+function containsNode(parent, node) {
+	return Boolean(node) && ($.isSame(parent, node) || $.hasDescendent(parent, node));
+}
+/**
 * Normalizes a selection limit to a nonnegative integer.
 * @param {number} value The requested limit.
 * @returns {number} The limit, or zero for unlimited selections.
@@ -215,7 +224,7 @@ var TagsInput = class extends BaseComponent {
 			this.#ariaHidden = $.getAttribute(this.node, "aria-hidden");
 			this.#maxSelections = normalizeLimit(this.options.maxSelections);
 			this.#placeholderText = String(this.options.placeholder ?? "");
-			this.#data = normalizeValues(this.options.data ?? [...this.node.options].map((option) => $.getValue(option)));
+			this.#data = normalizeValues(this.options.data ?? [...$.getProperty(this.node, "options")].map((option) => $.getValue(option)));
 			this.#loadResults = $._debounce((request, id) => this.#fetchResults(request, id), this.options.debounce);
 			this.#render();
 			this.#events();
@@ -410,16 +419,16 @@ var TagsInput = class extends BaseComponent {
 	* Binds reset handling to the select's current form, including external owners.
 	*/
 	#bindForm() {
-		if (this.#form === this.node.form) return;
+		if (this.#form === $.getProperty(this.node, "form")) return;
 		if (this.#form && this.#resetHandler) $.removeEvent(this.#form, "reset.ui.tagsinput", this.#resetHandler);
-		this.#form = this.node.form;
+		this.#form = $.getProperty(this.node, "form");
 		if (this.#form) $.addEvent(this.#form, "reset.ui.tagsinput", this.#resetHandler);
 	}
 	/**
 	* Applies the blur policies only when focus leaves the entire control.
 	*/
 	#blur() {
-		if (!this.node || this.#container.contains(this.node.ownerDocument.activeElement)) return;
+		if (!this.node || containsNode(this.#container, this.node.ownerDocument.activeElement)) return;
 		if (!$.is(this.node, ":disabled") && !this.#composing && $.getValue(this.#searchInput)) {
 			if (this.options.confirmOnBlur) this.#selectValue($.getValue(this.#searchInput), false);
 			else if (this.options.clearOnBlur) $.setValue(this.#searchInput, "");
@@ -534,8 +543,9 @@ var TagsInput = class extends BaseComponent {
 		this.#bindForm();
 		this.#documentHandler = (event) => {
 			if (!this.node) return;
-			if ((event.target.closest?.("label"))?.control === this.node && !this.#container.contains(event.target)) this.#focusHandler();
-			else if (!this.#container.contains(event.target) && !this.#menuNode.contains(event.target)) this.hide();
+			const label = $.is(event.target, "label") ? event.target : $.closest(event.target, "label")[0];
+			if ($.getProperty(label, "control") === this.node && !containsNode(this.#container, event.target)) this.#focusHandler();
+			else if (!containsNode(this.#container, event.target) && !containsNode(this.#menuNode, event.target)) this.hide();
 		};
 		$.addEvent(this.node.ownerDocument, "click.ui.tagsinput", this.#documentHandler);
 		$.addEvent(this.#container, "focusin.ui.tagsinput", () => {
@@ -543,7 +553,7 @@ var TagsInput = class extends BaseComponent {
 			this.#refreshPlaceholder();
 		});
 		$.addEvent(this.#container, "focusout.ui.tagsinput", (event) => {
-			if (!this.#container.contains(event.relatedTarget)) queueMicrotask(() => this.#blur());
+			if (!containsNode(this.#container, event.relatedTarget)) queueMicrotask(() => this.#blur());
 		});
 		$.addEvent(this.#container, "click.ui.tagsinput", (event) => {
 			if (!this.node || event.defaultPrevented || $.is(this.node, ":disabled")) return;
@@ -575,7 +585,7 @@ var TagsInput = class extends BaseComponent {
 		$.addEvent(this.#searchInput, "input.ui.tagsinput", () => this.#input());
 		$.addEvent(this.#searchInput, "keydown.ui.tagsinput", (event) => this.#keydown(event));
 		this.#scrollHandler = $._throttle(() => {
-			if (this.node && this.#open && !this.#loading && this.#showMore && this.#menuNode.scrollTop >= this.#menuNode.scrollHeight - this.#menuNode.clientHeight * 1.25) this.#load(this.#offset);
+			if (this.node && this.#open && !this.#loading && this.#showMore && $.getScrollY(this.#menuNode) >= $.height(this.#menuNode, { boxSize: $.SCROLL_BOX }) - $.height(this.#menuNode) * 1.25) this.#load(this.#offset);
 		}, 250, { leading: false });
 		$.addEvent(this.#menuNode, "scroll.ui.tagsinput", this.#scrollHandler);
 		this.#observer = new MutationObserver((records) => {
@@ -643,7 +653,7 @@ var TagsInput = class extends BaseComponent {
 				this.#request = null;
 				this.#loading = false;
 				this.update();
-				if (this.#showMore && this.#menuNode.scrollHeight <= this.#menuNode.clientHeight) this.#scrollHandler();
+				if (this.#showMore && $.height(this.#menuNode, { boxSize: $.SCROLL_BOX }) <= $.height(this.#menuNode)) this.#scrollHandler();
 			}
 		}
 	}
@@ -661,7 +671,7 @@ var TagsInput = class extends BaseComponent {
 		if (element) {
 			$.addClass(element, this.constructor.classes.focus);
 			$.setDataset(element, { uiFocus: "true" });
-			$.setAttribute(this.#searchInput, { "aria-activedescendant": element.id });
+			$.setAttribute(this.#searchInput, { "aria-activedescendant": $.getProperty(element, "id") });
 		} else $.removeAttribute(this.#searchInput, "aria-activedescendant");
 	}
 	/**
@@ -710,7 +720,7 @@ var TagsInput = class extends BaseComponent {
 			const option = this.#activeItems[next];
 			if (option) {
 				this.#focusItem(option);
-				option.scrollIntoView({ block: "nearest" });
+				$._callDomMethod(option, "scrollIntoView", { block: "nearest" });
 			}
 		}
 	}
@@ -760,7 +770,7 @@ var TagsInput = class extends BaseComponent {
 	* @returns {string[]} The selected values.
 	*/
 	#readNativeValue() {
-		return [...this.node.selectedOptions].map((option) => $.getValue(option));
+		return [...$.getProperty(this.node, "selectedOptions")].map((option) => $.getValue(option));
 	}
 	/**
 	* Refreshes native suggestions when mutation records include option changes.
@@ -768,8 +778,8 @@ var TagsInput = class extends BaseComponent {
 	* @returns {boolean} Whether native options changed.
 	*/
 	#refreshData(records) {
-		const changed = records.some((record) => record.type === "childList" || record.target !== this.node && record.target.tagName !== "FIELDSET");
-		if (changed && this.options.data === null && !this.options.getResults) this.#data = normalizeValues([...this.node.options].map((option) => $.getValue(option)));
+		const changed = records.some((record) => record.type === "childList" || record.target !== this.node && !$.is(record.target, "fieldset"));
+		if (changed && this.options.data === null && !this.options.getResults) this.#data = normalizeValues([...$.getProperty(this.node, "options")].map((option) => $.getValue(option)));
 		return changed;
 	}
 	/**
@@ -777,7 +787,7 @@ var TagsInput = class extends BaseComponent {
 	*/
 	#refreshFocus() {
 		if (this.node) {
-			if (!$.is(this.node, ":disabled") && (this.#open || this.#container.contains(this.node.ownerDocument.activeElement))) $.addClass(this.#toggle, this.constructor.classes.focus);
+			if (!$.is(this.node, ":disabled") && (this.#open || containsNode(this.#container, this.node.ownerDocument.activeElement))) $.addClass(this.#toggle, this.constructor.classes.focus);
 			else $.removeClass(this.#toggle, this.constructor.classes.focus);
 		}
 	}
@@ -788,7 +798,7 @@ var TagsInput = class extends BaseComponent {
 		const html = this.options.sanitize.call(this, this.#placeholderText || "&nbsp;");
 		if (!this.node) return;
 		$.setHtml(this.#placeholder, html);
-		this.#placeholder.hidden = Boolean(this.#value.length) || Boolean($.getValue(this.#searchInput)) || this.node.ownerDocument.activeElement === this.#searchInput;
+		$.setProperty(this.#placeholder, { hidden: Boolean(this.#value.length) || Boolean($.getValue(this.#searchInput)) || this.node.ownerDocument.activeElement === this.#searchInput });
 	}
 	/**
 	* Synchronizes editor attributes, styling, and disabled state.
@@ -797,18 +807,20 @@ var TagsInput = class extends BaseComponent {
 		this.#bindForm();
 		const classes = this.constructor.classes;
 		const disabled = $.is(this.node, ":disabled");
-		this.#toggle.className = [...this.node.classList].filter((name) => !classes.hide.split(" ").includes(name)).join(" ");
+		$.setProperty(this.#toggle, { className: $.getProperty(this.node, "className") });
+		$.removeClass(this.#toggle, classes.hide);
 		$.addClass(this.#toggle, classes.tagToggle);
 		if (disabled) $.addClass(this.#toggle, classes.disabled);
 		else $.removeClass(this.#toggle, classes.disabled);
-		$.setProperty(this.#searchInput, { disabled });
-		this.#searchInput.tabIndex = disabled ? -1 : Number(this.#tabIndex ?? 0);
+		$.setProperty(this.#searchInput, {
+			disabled,
+			tabIndex: disabled ? -1 : Number(this.#tabIndex ?? 0)
+		});
 		$.setAttribute(this.#searchInput, { "aria-disabled": String(disabled) });
-		$.setAttribute(this.#searchInput, { "aria-required": String(this.node.required) });
+		$.setAttribute(this.#searchInput, { "aria-required": String($.getProperty(this.node, "required")) });
 		for (const button of $.find("button", this.#toggle)) $.setProperty(button, { disabled });
 		const direction = $.css(this.node, "direction");
-		this.#container.dir = direction;
-		this.#menuNode.dir = direction;
+		$.setProperty([this.#container, this.#menuNode], { dir: direction });
 		$.removeClass(this.#menuNode, [classes.menuSmall, classes.menuLarge]);
 		if ($.is(this.node, ".input-sm") || $.closest(this.node, ".input-group-sm").length) $.addClass(this.#menuNode, classes.menuSmall);
 		else if ($.is(this.node, ".input-lg") || $.closest(this.node, ".input-group-lg").length) $.addClass(this.#menuNode, classes.menuLarge);
@@ -822,10 +834,10 @@ var TagsInput = class extends BaseComponent {
 			if (value === null) $.removeAttribute(this.#searchInput, name);
 			else $.setAttribute(this.#searchInput, { [name]: value });
 		}
-		const label = $.getAttribute(this.node, "aria-label") || [...this.node.labels].map((node) => $.getText(node).trim()).join(" ") || this.options.lang.search;
+		const label = $.getAttribute(this.node, "aria-label") || [...$.getProperty(this.node, "labels")].map((node) => $.getText(node).trim()).join(" ") || this.options.lang.search;
 		$.setAttribute(this.#searchInput, { "aria-label": label });
 		$.setAttribute(this.#menuNode, { "aria-label": label });
-		if (this.#invalid && !this.node.validity.valid) $.setAttribute(this.#searchInput, { "aria-invalid": "true" });
+		if (this.#invalid && !$.getProperty(this.node, "validity").valid) $.setAttribute(this.#searchInput, { "aria-invalid": "true" });
 		this.#refreshFocus();
 		if (disabled) this.#close(true);
 	}
@@ -932,7 +944,7 @@ var TagsInput = class extends BaseComponent {
 			this.#activeItems.push(element);
 			$.append(this.#menuNode, element);
 		}
-		if (!this.#menuNode.children.length) $.hide(this.#menuNode);
+		if (!$.hasChildren(this.#menuNode)) $.hide(this.#menuNode);
 		if (!$.findOne("[data-ui-focus]", this.#menuNode)) this.#focusItem(this.#activeItems[0] || null);
 	}
 	/**
@@ -940,7 +952,7 @@ var TagsInput = class extends BaseComponent {
 	* @param {number} id The value generation.
 	*/
 	#renderSelection(id) {
-		const fragment = this.node.ownerDocument.createDocumentFragment();
+		const fragment = $._callDomMethod(this.node.ownerDocument, "createDocumentFragment");
 		const classes = this.constructor.classes;
 		for (const value of this.#value) {
 			const group = $.create("div", {
@@ -1006,7 +1018,7 @@ var TagsInput = class extends BaseComponent {
 		const changed = values.length !== this.#value.length || values.some((entry, index) => entry !== this.#value[index]);
 		this.#value = values;
 		const lookup = /* @__PURE__ */ new Map();
-		for (const option of this.node.options) {
+		for (const option of $.getProperty(this.node, "options")) {
 			$.setProperty(option, { selected: false });
 			if (!lookup.has($.getValue(option))) lookup.set($.getValue(option), option);
 		}
@@ -1018,12 +1030,12 @@ var TagsInput = class extends BaseComponent {
 					text: entry
 				});
 				this.#generatedOptions.add(option);
-				this.node.append(option);
+				$.append(this.node, option);
 			}
 			$.setProperty(option, { selected: true });
 		}
-		for (const option of this.#generatedOptions) if (!this.node.contains(option) || !option.selected && !option.defaultSelected) {
-			option.remove();
+		for (const option of this.#generatedOptions) if (!containsNode(this.node, option) || !$.getProperty(option, "selected") && !$.getProperty(option, "defaultSelected")) {
+			$.remove(option);
 			this.#generatedOptions.delete(option);
 		}
 		this.#observer?.takeRecords();
@@ -1058,7 +1070,7 @@ var TagsInput = class extends BaseComponent {
 				whiteSpace: "pre"
 			}
 		});
-		this.node.ownerDocument.body.append(span);
+		$.append(this.node.ownerDocument.body, span);
 		$.setStyle(this.#searchInput, "width", `${$.width(span) + 2}px`);
 		$.remove(span);
 	}
