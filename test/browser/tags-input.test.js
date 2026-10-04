@@ -30,6 +30,26 @@ test.describe('TagsInput', () => {
             });
         }
 
+        test('transfers native focus on initialization', async ({ page }) => {
+            await page.evaluate(() => {
+                const node = $.findOne('#tags');
+                $.focus(node);
+                UI.TagsInput.init(node);
+            });
+
+            await expect(page.getByRole('combobox')).toBeFocused();
+            await expect(page.locator('.tagsinput')).toHaveClass(/focus/);
+            await expect(page.locator('.tagsinput-menu')).toHaveCount(0);
+        });
+
+        test('preserves outside focus on initialization', async ({ page }) => {
+            await page.locator('#outside').focus();
+            await page.evaluate(() => UI.TagsInput.init($.findOne('#tags')));
+
+            await expect(page.locator('#outside')).toBeFocused();
+            await expect(page.locator('.tagsinput')).not.toHaveClass(/focus/);
+        });
+
         test('reuses an existing instance and respects data options', async ({ page }) => {
             const state = await page.evaluate(() => {
                 const node = $.findOne('#tags');

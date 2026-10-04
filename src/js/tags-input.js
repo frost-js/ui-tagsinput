@@ -198,9 +198,15 @@ export default class TagsInput extends BaseComponent {
             this.#data = normalizeValues(this.options.data ?? [...$.getProperty(this.node, 'options')].map((option) => $.getValue(option)));
             this.#loadResults = $._debounce((request, id) => this.#fetchResults(request, id), this.options.debounce);
 
+            const focused = $.is(this.node, ':focus');
+
             this.#render();
             this.#events();
             this.#setValue(this.#readNativeValue());
+
+            if (focused) {
+                $.focus(this.#searchInput);
+            }
         } catch (error) {
             this.dispose();
             throw error;

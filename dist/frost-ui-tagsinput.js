@@ -258,9 +258,11 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 				this.#placeholderText = String(this.options.placeholder ?? "");
 				this.#data = normalizeValues(this.options.data ?? [..._fr0st_query.default.getProperty(this.node, "options")].map((option) => _fr0st_query.default.getValue(option)));
 				this.#loadResults = _fr0st_query.default._debounce((request, id) => this.#fetchResults(request, id), this.options.debounce);
+				const focused = _fr0st_query.default.is(this.node, ":focus");
 				this.#render();
 				this.#events();
 				this.#setValue(this.#readNativeValue());
+				if (focused) _fr0st_query.default.focus(this.#searchInput);
 			} catch (error) {
 				this.dispose();
 				throw error;
