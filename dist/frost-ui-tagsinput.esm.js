@@ -181,6 +181,7 @@ var TagsInput = class extends BaseComponent {
 	#data = [];
 	#dispatching = false;
 	#documentHandler;
+	#focusedItem = null;
 	#focusHandler;
 	#form = null;
 	#generatedOptions = /* @__PURE__ */ new Set();
@@ -279,6 +280,7 @@ var TagsInput = class extends BaseComponent {
 		$.remove(this.#menuNode);
 		$.remove(this.#container);
 		this.#activeItems = [];
+		this.#focusedItem = null;
 		this.#data = [];
 		this.#generatedOptions.clear();
 		this.#value = [];
@@ -665,14 +667,10 @@ var TagsInput = class extends BaseComponent {
 	*/
 	#focusItem(element) {
 		if (!this.#menuNode) return;
-		const previous = $.findOne("[data-ui-focus]", this.#menuNode);
-		if (previous) {
-			$.removeClass(previous, this.constructor.classes.focus);
-			$.removeDataset(previous, "uiFocus");
-		}
+		$.removeClass(this.#focusedItem, this.constructor.classes.focus);
+		this.#focusedItem = element;
 		if (element) {
 			$.addClass(element, this.constructor.classes.focus);
-			$.setDataset(element, { uiFocus: "true" });
 			$.setAttribute(this.#searchInput, { "aria-activedescendant": $.getProperty(element, "id") });
 		} else $.removeAttribute(this.#searchInput, "aria-activedescendant");
 	}
@@ -697,7 +695,7 @@ var TagsInput = class extends BaseComponent {
 	#keydown(event) {
 		if (!this.node || $.is(this.node, ":disabled") || event.isComposing || this.#composing || event.ctrlKey || event.altKey || event.metaKey) return;
 		const key = event.key;
-		const active = this.#open ? $.findOne("[data-ui-focus]", this.#menuNode) : null;
+		const active = this.#open ? this.#focusedItem : null;
 		if (key === "Enter" || this.options.confirmKeys.includes(key)) {
 			const value = key === "Enter" && active ? $.getAttribute(active, "data-ui-value") : $.getValue(this.#searchInput);
 			if (value || this.options.confirmKeys.includes(key)) {
@@ -947,7 +945,7 @@ var TagsInput = class extends BaseComponent {
 			$.append(this.#menuNode, element);
 		}
 		if (!$.hasChildren(this.#menuNode)) $.hide(this.#menuNode);
-		if (!$.findOne("[data-ui-focus]", this.#menuNode)) this.#focusItem(this.#activeItems[0] || null);
+		if (!this.#focusedItem) this.#focusItem(this.#activeItems[0] || null);
 	}
 	/**
 	* Builds tag chips in a fragment, leaving the editor and its focus intact.

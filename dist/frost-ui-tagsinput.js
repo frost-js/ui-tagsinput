@@ -213,6 +213,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 		#data = [];
 		#dispatching = false;
 		#documentHandler;
+		#focusedItem = null;
 		#focusHandler;
 		#form = null;
 		#generatedOptions = /* @__PURE__ */ new Set();
@@ -311,6 +312,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			_fr0st_query.default.remove(this.#menuNode);
 			_fr0st_query.default.remove(this.#container);
 			this.#activeItems = [];
+			this.#focusedItem = null;
 			this.#data = [];
 			this.#generatedOptions.clear();
 			this.#value = [];
@@ -697,14 +699,10 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 		*/
 		#focusItem(element) {
 			if (!this.#menuNode) return;
-			const previous = _fr0st_query.default.findOne("[data-ui-focus]", this.#menuNode);
-			if (previous) {
-				_fr0st_query.default.removeClass(previous, this.constructor.classes.focus);
-				_fr0st_query.default.removeDataset(previous, "uiFocus");
-			}
+			_fr0st_query.default.removeClass(this.#focusedItem, this.constructor.classes.focus);
+			this.#focusedItem = element;
 			if (element) {
 				_fr0st_query.default.addClass(element, this.constructor.classes.focus);
-				_fr0st_query.default.setDataset(element, { uiFocus: "true" });
 				_fr0st_query.default.setAttribute(this.#searchInput, { "aria-activedescendant": _fr0st_query.default.getProperty(element, "id") });
 			} else _fr0st_query.default.removeAttribute(this.#searchInput, "aria-activedescendant");
 		}
@@ -729,7 +727,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 		#keydown(event) {
 			if (!this.node || _fr0st_query.default.is(this.node, ":disabled") || event.isComposing || this.#composing || event.ctrlKey || event.altKey || event.metaKey) return;
 			const key = event.key;
-			const active = this.#open ? _fr0st_query.default.findOne("[data-ui-focus]", this.#menuNode) : null;
+			const active = this.#open ? this.#focusedItem : null;
 			if (key === "Enter" || this.options.confirmKeys.includes(key)) {
 				const value = key === "Enter" && active ? _fr0st_query.default.getAttribute(active, "data-ui-value") : _fr0st_query.default.getValue(this.#searchInput);
 				if (value || this.options.confirmKeys.includes(key)) {
@@ -979,7 +977,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 				_fr0st_query.default.append(this.#menuNode, element);
 			}
 			if (!_fr0st_query.default.hasChildren(this.#menuNode)) _fr0st_query.default.hide(this.#menuNode);
-			if (!_fr0st_query.default.findOne("[data-ui-focus]", this.#menuNode)) this.#focusItem(this.#activeItems[0] || null);
+			if (!this.#focusedItem) this.#focusItem(this.#activeItems[0] || null);
 		}
 		/**
 		* Builds tag chips in a fragment, leaving the editor and its focus intact.
