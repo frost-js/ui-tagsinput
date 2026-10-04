@@ -214,7 +214,7 @@ Local data is an array of primitive values. Numbers become strings; duplicates a
 
 Selection normalization converts scalars/arrays to unique strings, removes nullish entries, optionally trims, validates, and applies the limit. Empty strings are rejected by the default validator. Whitespace-only strings remain valid unless trimming or custom validation rejects them. Limits are floored to nonnegative integers; negative or nonfinite limits become zero.
 
-`confirmKeys` supplements Enter. With the default comma/space keys, use another key list when tags need spaces. Confirmation clears the editor even when the value is rejected or already selected. `confirmOnBlur` takes precedence over `clearOnBlur`; disable both to preserve unfinished input on blur. Composition input is not confirmed while IME composition is active.
+`confirmKeys` supplements Enter. With the default comma/space keys, use another key list when tags need spaces. Confirmation clears the editor even when the value is rejected or already selected. `confirmOnBlur` takes precedence over `clearOnBlur`; disable both to preserve unfinished input on blur. Input and confirmation keys respect the native event’s `isComposing` flag.
 
 ### Asynchronous search and pagination
 
@@ -245,7 +245,7 @@ TagsInput.init(document.querySelector('#tags'), {
 
 The callback owns remote filtering and ordering. Results are normalized to strings and deduplicated across pages. Scrolling near the bottom loads another page; short pages load automatically until the menu can scroll. Empty pages stop pagination even if `showMore` is true. An empty first page hides the menu; a later empty page keeps existing suggestions. Synchronous throws, rejected promises, and malformed responses show `lang.error`. Search again or reopen to retry.
 
-New searches, ineligible terms, hide, disable, and disposal invalidate queued/in-flight work. If the returned object has `cancel()`, TagsInput calls it; otherwise the operation may continue, but stale results are ignored. For example, a real service can return a cancellable fetch promise:
+New searches, ineligible terms, successful hides, and disposal invalidate queued/in-flight work. Disabling requests a hide using the same cancellable lifecycle event. If the returned object has `cancel()`, TagsInput calls it; otherwise the operation may continue, but stale results are ignored. For example, a real service can return a cancellable fetch promise:
 
 ```js
 function getResults({ offset, term = '' }) {
@@ -280,6 +280,8 @@ TagsInput.init(document.querySelector('#tags'), {
     renderSelection: (value) => value,
 });
 ```
+
+Synchronous validation, matching, and rendering callbacks are not coordinated with nested `setValue()` calls.
 
 Returned strings, placeholders, and status messages pass through `sanitize`. Returned elements and direct DOM changes bypass string sanitization; use `textContent` for untrusted text. Accessible result names and removal labels use the tag value. Keep essential identifying information in that value even when adding custom markup.
 
@@ -367,7 +369,7 @@ $.addEvent('#tags', 'change.ui.tagsinput', (event) => {
 
 fQuery exposes the namespace on `event.namespace`; the native type is `change`, `show`, etc. Initialization, API setters, form resets, and selection no-ops do not emit a component change event. Backspace, confirmation, and removal buttons emit one change per effective edit. Applications can explicitly notify after an API update with `$.triggerEvent(select, 'change.ui.tagsinput')`.
 
-Lifecycle listeners may dispose the component; interrupted transitions do not emit stale completion events. Disabling an open control forces it closed even if a hide listener cancels the event.
+Lifecycle listeners may dispose the component; interrupted transitions do not emit stale completion events. Disabling an open control requests a hide; canceling the hide event keeps the menu open, as with SelectMenu.
 
 ## fQuery API
 

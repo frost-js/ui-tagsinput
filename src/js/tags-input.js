@@ -141,10 +141,8 @@ export default class TagsInput extends BaseComponent {
     #activeItems = [];
     #ariaHidden;
     #changeHandler;
-    #composing = false;
     #container;
     #data = [];
-    #dispatching = false;
     #documentHandler;
     #focusedItem = null;
     #focusHandler;
@@ -175,7 +173,6 @@ export default class TagsInput extends BaseComponent {
     #toggle;
     #transitionId = 0;
     #value = [];
-    #valueId = 0;
 
     /**
      * Creates a TagsInput and registers it with the native select.
@@ -231,47 +228,42 @@ export default class TagsInput extends BaseComponent {
     }
 
     /**
-     * Disables the editor and closes suggestions, including pending work.
+     * Disables the editor and hides suggestions.
      */
     disable() {
-        if (this.node) {
-            $.setProperty(this.node, { disabled: true });
-            this.#refreshState();
-        }
+        $.setProperty(this.node, { disabled: true });
+        this.#refreshState();
+        this.hide();
     }
 
-    /**
-     * Cancels owned work and restores the native control with its current values.
-     * Safe to call again or from a component callback.
-     */
+    /** @inheritdoc */
     dispose() {
         if (!this.node) {
             return;
         }
 
-        const node = this.node;
-        // Invalidate transitions and value work before consumer callbacks can reenter.
         this.#transitionId++;
-        this.#valueId++;
-        this.#observer?.disconnect();
+        this.#cancelSearch();
         clearTimeout(this.#resetTimer);
         this.#scrollHandler?.cancel();
+
+        this.#observer?.disconnect();
         this.#popper?.dispose();
 
         if (this.#focusHandler) {
-            $.removeEvent(node, 'focus.ui.tagsinput', this.#focusHandler);
+            $.removeEvent(this.node, 'focus.ui.tagsinput', this.#focusHandler);
         }
 
         if (this.#changeHandler) {
-            $.removeEvent(node, 'change.ui.tagsinput', this.#changeHandler);
+            $.removeEvent(this.node, 'change.ui.tagsinput', this.#changeHandler);
         }
 
         if (this.#invalidHandler) {
-            $.removeEvent(node, 'invalid.ui.tagsinput', this.#invalidHandler);
+            $.removeEvent(this.node, 'invalid.ui.tagsinput', this.#invalidHandler);
         }
 
         if (this.#documentHandler) {
-            $.removeEvent(node.ownerDocument, 'click.ui.tagsinput', this.#documentHandler);
+            $.removeEvent(this.node.ownerDocument, 'click.ui.tagsinput', this.#documentHandler);
         }
 
         if (this.#form && this.#resetHandler) {
@@ -279,50 +271,55 @@ export default class TagsInput extends BaseComponent {
         }
 
         if (this.#hidden) {
-            $.addClass(node, this.constructor.classes.hide);
+            $.addClass(this.node, this.constructor.classes.hide);
         } else {
-            $.removeClass(node, this.constructor.classes.hide);
+            $.removeClass(this.node, this.constructor.classes.hide);
         }
 
         for (const [name, value] of [['tabindex', this.#tabIndex], ['aria-hidden', this.#ariaHidden]]) {
             if (value === null) {
-                $.removeAttribute(node, name);
+                $.removeAttribute(this.node, name);
             } else {
-                $.setAttribute(node, { [name]: value });
+                $.setAttribute(this.node, { [name]: value });
             }
         }
 
-        // Remove ownership before cancellation callbacks can reenter disposal.
-        super.dispose();
-        this.#cancelSearch();
         $.remove(this.#menuNode);
         $.remove(this.#container);
+
         this.#activeItems = [];
-        this.#focusedItem = null;
         this.#data = [];
+        this.#focusedItem = null;
         this.#generatedOptions.clear();
-        this.#value = [];
-        this.#open = false;
+
+        this.#changeHandler = null;
+        this.#documentHandler = null;
+        this.#focusHandler = null;
+        this.#invalidHandler = null;
+        this.#resetHandler = null;
+
         this.#container = null;
         this.#form = null;
         this.#menuNode = null;
+        this.#observer = null;
         this.#placeholder = null;
         this.#popper = null;
         this.#searchInput = null;
         this.#toggle = null;
-        this.#observer = null;
         this.#loadResults = null;
         this.#scrollHandler = null;
+        this.#value = [];
+        this.#open = false;
+
+        super.dispose();
     }
 
     /**
      * Enables the editor unless its containing fieldset remains disabled.
      */
     enable() {
-        if (this.node) {
-            $.setProperty(this.node, { disabled: false });
-            this.#refreshState();
-        }
+        $.setProperty(this.node, { disabled: false });
+        this.#refreshState();
     }
 
     /**
@@ -353,7 +350,39 @@ export default class TagsInput extends BaseComponent {
      * Hides suggestions unless the hide event is canceled.
      */
     hide() {
-        this.#close();
+        if (
+            !this.node ||
+            !this.#open ||
+            !$.triggerOne(this.node, 'hide.ui.tagsinput') ||
+            !this.node
+        ) {
+            return;
+        }
+
+        this.#open = false;
+        this.#refreshFocus();
+
+        this.#cancelSearch();
+        this.#scrollHandler.cancel();
+
+        this.#focusItem(null);
+        $.setAttribute(this.#searchInput, { 'aria-expanded': false });
+
+        const id = ++this.#transitionId;
+        $.removeClass(this.#menuNode, 'show');
+
+        waitForTransition(this.#menuNode, ['opacity']).then(() => {
+            if (!this.node || id !== this.#transitionId) {
+                return;
+            }
+
+            this.#popper?.dispose();
+            this.#popper = null;
+            $.detach(this.#menuNode);
+            this.#clearResults();
+
+            $.triggerEvent(this.node, 'hidden.ui.tagsinput');
+        });
     }
 
     /**
@@ -361,7 +390,7 @@ export default class TagsInput extends BaseComponent {
      * @param {TagsInputValue} value The value to remove.
      */
     remove(value) {
-        const [key] = normalizeValues(value, this.options?.trimValue);
+        const [key] = normalizeValues(value, this.options.trimValue);
         this.#setValue(this.#value.filter((entry) => entry !== key));
     }
 
@@ -388,9 +417,7 @@ export default class TagsInput extends BaseComponent {
     setPlaceholder(placeholder) {
         this.#placeholderText = String(placeholder ?? '');
 
-        if (this.node) {
-            this.#refreshPlaceholder();
-        }
+        this.#refreshPlaceholder();
     }
 
     /**
@@ -409,12 +436,14 @@ export default class TagsInput extends BaseComponent {
             !this.node ||
             this.#open ||
             $.is(this.node, ':disabled') ||
-            !this.#before('show')
+            !$.triggerOne(this.node, 'show.ui.tagsinput') ||
+            !this.node
         ) {
             return;
         }
 
         this.#open = true;
+        this.#refreshFocus();
 
         const id = ++this.#transitionId;
 
@@ -427,16 +456,16 @@ export default class TagsInput extends BaseComponent {
         $.setAttribute(this.#searchInput, { 'aria-expanded': 'true' });
         this.#load();
 
-        if (!this.node || !this.#open || id !== this.#transitionId) {
+        if (!this.node) {
             return;
         }
 
         this.#createPopper();
         $.css(this.#menuNode, 'opacity');
         $.addClass(this.#menuNode, 'show');
-        this.#refreshFocus();
+
         waitForTransition(this.#menuNode, ['opacity']).then(() => {
-            if (this.node && this.#open && id === this.#transitionId) {
+            if (this.node && id === this.#transitionId) {
                 $.triggerEvent(this.node, 'shown.ui.tagsinput');
             }
         });
@@ -457,29 +486,8 @@ export default class TagsInput extends BaseComponent {
      * Updates the menu position and editor width.
      */
     update() {
-        if (this.node) {
-            this.#updateSearchWidth();
-            this.#popper?.update();
-        }
-    }
-
-    /**
-     * Dispatches a cancellable lifecycle event, guarding recursive calls and disposal.
-     * @param {string} name The event name.
-     * @returns {boolean} Whether the operation can continue.
-     */
-    #before(name) {
-        if (this.#dispatching) {
-            return false;
-        }
-
-        this.#dispatching = true;
-
-        try {
-            return $.triggerOne(this.node, `${name}.ui.tagsinput`) && Boolean(this.node);
-        } finally {
-            this.#dispatching = false;
-        }
+        this.#updateSearchWidth();
+        this.#popper?.update();
     }
 
     /**
@@ -509,7 +517,7 @@ export default class TagsInput extends BaseComponent {
             return;
         }
 
-        if (!$.is(this.node, ':disabled') && !this.#composing && $.getValue(this.#searchInput)) {
+        if (!$.is(this.node, ':disabled') && $.getValue(this.#searchInput)) {
             if (this.options.confirmOnBlur) {
                 this.#selectValue($.getValue(this.#searchInput), false);
             } else if (this.options.clearOnBlur) {
@@ -541,7 +549,6 @@ export default class TagsInput extends BaseComponent {
     #cancelSearch() {
         this.#requestId++;
         this.#loadResults?.cancel();
-        this.#scrollHandler?.cancel();
 
         const request = this.#request;
         this.#request = null;
@@ -564,54 +571,10 @@ export default class TagsInput extends BaseComponent {
     }
 
     /**
-     * Closes suggestions, optionally forcing closure when the control is disabled.
-     * @param {boolean} [force=false] Whether to bypass a canceled hide event.
-     */
-    #close(force = false) {
-        if (!this.node || !this.#open) {
-            return;
-        }
-
-        const allowed = this.#before('hide');
-
-        if (!this.node || (!allowed && !force)) {
-            return;
-        }
-
-        this.#open = false;
-
-        const id = ++this.#transitionId;
-        this.#cancelSearch();
-
-        if (!this.node || this.#open || id !== this.#transitionId) {
-            return;
-        }
-
-        this.#showMore = false;
-        this.#focusItem(null);
-        $.setAttribute(this.#searchInput, { 'aria-expanded': 'false' });
-        $.removeClass(this.#menuNode, 'show');
-        this.#refreshFocus();
-        waitForTransition(this.#menuNode, ['opacity']).then(() => {
-            if (!this.node || id !== this.#transitionId) {
-                return;
-            }
-
-            this.#popper?.dispose();
-            this.#popper = null;
-            $.detach(this.#menuNode);
-            this.#clearResults();
-            $.triggerEvent(this.node, 'hidden.ui.tagsinput');
-        });
-    }
-
-    /**
      * Positions the menu with the current UI Popper contract.
      */
     #createPopper() {
         if (this.#popper) {
-            this.#popper.update();
-
             return;
         }
 
@@ -730,6 +693,10 @@ export default class TagsInput extends BaseComponent {
 
                 this.#setValue(values, true);
 
+                if (this.node && this.#open) {
+                    this.#load();
+                }
+
                 if (this.node) {
                     $.focus(this.#searchInput);
                 }
@@ -756,23 +723,25 @@ export default class TagsInput extends BaseComponent {
             },
         );
 
-        $.addEvent(this.#searchInput, 'compositionstart.ui.tagsinput', () => {
-            this.#composing = true;
-        });
+        $.addEvent(this.#searchInput, 'input.ui.tagsinput', (event) => {
+            if ($.is(this.node, ':disabled') || event.isComposing) {
+                return;
+            }
 
-        $.addEvent(this.#searchInput, 'compositionend.ui.tagsinput', () => {
-            this.#composing = false;
-            this.#input();
-        });
+            this.#updateSearchWidth();
+            this.#refreshPlaceholder();
 
-        $.addEvent(this.#searchInput, 'input.ui.tagsinput', () => this.#input());
+            if (this.#open) {
+                this.#load();
+            } else {
+                this.show();
+            }
+        });
 
         $.addEvent(this.#searchInput, 'keydown.ui.tagsinput', (event) => {
             if (
-                !this.node ||
                 $.is(this.node, ':disabled') ||
                 event.isComposing ||
-                this.#composing ||
                 event.ctrlKey ||
                 event.altKey ||
                 event.metaKey
@@ -795,6 +764,10 @@ export default class TagsInput extends BaseComponent {
             } else if (key === 'Backspace' && !$.getValue(this.#searchInput) && this.#value.length) {
                 event.preventDefault();
                 this.#setValue(this.#value.slice(0, -1), true);
+
+                if (this.node && this.#open) {
+                    this.#load();
+                }
             } else if (key === 'Escape' && this.#open) {
                 event.preventDefault();
                 event.stopPropagation();
@@ -820,19 +793,14 @@ export default class TagsInput extends BaseComponent {
         });
 
         this.#scrollHandler = $._throttle(() => {
-            if (
-                this.node &&
-                this.#open &&
-                !this.#loading &&
-                this.#showMore
-            ) {
-                const menu = this.#menuNode;
-                const scrollTop = $.getScrollY(menu);
-                const threshold = $.height(menu, { boxSize: $.SCROLL_BOX }) - $.height(menu) * 1.25;
+            if (!this.node || !this.#open || this.#loading || !this.#showMore) {
+                return;
+            }
 
-                if (scrollTop >= threshold) {
-                    this.#load(this.#offset);
-                }
+            const list = this.#menuNode;
+
+            if ($.getScrollY(list) >= $.height(list, { boxSize: $.SCROLL_BOX }) - $.height(list) * 1.25) {
+                this.#load(this.#offset);
             }
         }, 250, { leading: false });
 
@@ -852,6 +820,10 @@ export default class TagsInput extends BaseComponent {
                 this.#restoreFocus(focusedValue);
             } else {
                 this.#refreshState();
+            }
+
+            if ($.is(this.node, ':disabled')) {
+                this.hide();
             }
         });
 
@@ -882,14 +854,14 @@ export default class TagsInput extends BaseComponent {
      * @returns {Promise<void>} Resolves when the request settles.
      */
     async #fetchResults(request, id) {
-        if (id !== this.#requestId) {
+        if (!this.node || id !== this.#requestId) {
             return;
         }
 
         try {
             const result = this.options.getResults.call(this, request);
 
-            if (id !== this.#requestId) {
+            if (!this.node || id !== this.#requestId) {
                 result?.cancel?.();
 
                 return;
@@ -899,7 +871,7 @@ export default class TagsInput extends BaseComponent {
 
             const response = await result;
 
-            if (id !== this.#requestId) {
+            if (!this.node || id !== this.#requestId) {
                 return;
             }
 
@@ -915,15 +887,15 @@ export default class TagsInput extends BaseComponent {
 
             this.#offset = request.offset + response.results.length;
             this.#showMore = Boolean(response.showMore) && response.results.length > 0;
-            this.#renderResults(normalizeValues(response.results), id);
+            this.#renderResults(normalizeValues(response.results));
         } catch {
-            if (id === this.#requestId) {
+            if (this.node && id === this.#requestId) {
                 this.#showMore = false;
                 $.remove($.children(this.#menuNode, '[role="status"]'));
                 this.#renderInfo(this.options.lang.error);
             }
         } finally {
-            if (id === this.#requestId) {
+            if (this.node && id === this.#requestId) {
                 this.#request = null;
                 this.#loading = false;
                 this.update();
@@ -940,10 +912,6 @@ export default class TagsInput extends BaseComponent {
      * @param {HTMLElement|null} element The active suggestion.
      */
     #focusItem(element) {
-        if (!this.#menuNode) {
-            return;
-        }
-
         $.removeClass(this.#focusedItem, this.constructor.classes.focus);
         this.#focusedItem = element;
 
@@ -956,61 +924,19 @@ export default class TagsInput extends BaseComponent {
     }
 
     /**
-     * Filters and sorts local suggestions, stopping an interrupted search.
+     * Filters and sorts local suggestions for the current search term.
      * @param {string} term The search term.
-     * @param {number} id The request generation.
      * @returns {string[]} The matching results.
      */
-    #getLocalResults(term, id) {
-        const data = this.#data.slice();
-
+    #getLocalResults(term) {
         if (!term) {
-            return data;
+            return this.#data;
         }
 
         const options = this.options;
-        const results = [];
+        const results = this.#data.filter((value) => options.isMatch.call(this, value, term));
 
-        for (const value of data) {
-            const match = options.isMatch.call(this, value, term);
-
-            if (id !== this.#requestId) {
-                return [];
-            }
-
-            if (match) {
-                results.push(value);
-            }
-        }
-
-        return results.sort((a, b) => id === this.#requestId ?
-            options.sortResults.call(this, a, b, term) :
-            0,
-        );
-    }
-
-    /**
-     * Refreshes search sizing and suggestions after input, excluding IME composition.
-     */
-    #input() {
-        if (!this.node || $.is(this.node, ':disabled')) {
-            return;
-        }
-
-        this.#updateSearchWidth();
-        this.#refreshPlaceholder();
-
-        if (this.#composing) {
-            this.#cancelSearch();
-
-            return;
-        }
-
-        if (this.#open) {
-            this.#load();
-        } else {
-            this.show();
-        }
+        return results.sort((a, b) => options.sortResults.call(this, a, b, term));
     }
 
     /**
@@ -1020,11 +946,9 @@ export default class TagsInput extends BaseComponent {
     #load(offset = 0) {
         this.#cancelSearch();
 
-        if (!this.node || !this.#open) {
+        if (!this.node) {
             return;
         }
-
-        const id = this.#requestId;
 
         if (!offset) {
             this.#clearResults();
@@ -1052,18 +976,20 @@ export default class TagsInput extends BaseComponent {
             this.#loading = true;
             this.#renderInfo(this.options.lang.loading);
 
-            if (id === this.#requestId) {
-                this.#loadResults(term ? { offset, term } : { offset }, id);
+            if (this.node) {
+                this.#loadResults(term ? { offset, term } : { offset }, this.#requestId);
             }
         } else {
-            const results = this.#getLocalResults(term, id);
+            const results = this.#getLocalResults(term);
 
-            if (id === this.#requestId) {
-                this.#renderResults(results, id);
+            if (this.node) {
+                this.#renderResults(results);
             }
         }
 
-        this.update();
+        if (this.node) {
+            this.update();
+        }
     }
 
     /**
@@ -1075,29 +1001,22 @@ export default class TagsInput extends BaseComponent {
     }
 
     /**
-     * Refreshes the selection, control state, placeholder, and editor width.
-     * Consumer callbacks can dispose the component or replace its value.
-     * @param {number} id The value generation.
+     * Refreshes the selection, placeholder, control state, and editor width.
      */
-    #refresh(id) {
-        this.#renderSelection(id);
+    #refresh() {
+        this.#renderSelection();
 
-        if (id !== this.#valueId) {
-            return;
-        }
-
-        this.#refreshState();
-
-        if (id !== this.#valueId) {
+        if (!this.node) {
             return;
         }
 
         this.#refreshPlaceholder();
 
-        if (id !== this.#valueId) {
+        if (!this.node) {
             return;
         }
 
+        this.#refreshState();
         this.#updateSearchWidth();
     }
 
@@ -1176,12 +1095,12 @@ export default class TagsInput extends BaseComponent {
             tabIndex: disabled ? -1 : Number(this.#tabIndex ?? 0),
         });
 
-        $.setAttribute(this.#searchInput, { 'aria-disabled': String(disabled) });
-        $.setAttribute(this.#searchInput, { 'aria-required': String($.getProperty(this.node, 'required')) });
+        $.setAttribute(this.#searchInput, {
+            'aria-disabled': disabled,
+            'aria-required': Boolean($.getProperty(this.node, 'required')),
+        });
 
-        for (const button of $.find('button', this.#toggle)) {
-            $.setProperty(button, { disabled });
-        }
+        $.setProperty($.find('button', this.#toggle), { disabled });
 
         const direction = $.css(this.node, 'direction');
         $.setProperty([this.#container, this.#menuNode], { dir: direction });
@@ -1215,10 +1134,6 @@ export default class TagsInput extends BaseComponent {
         }
 
         this.#refreshFocus();
-
-        if (disabled) {
-            this.#close(true);
-        }
     }
 
     /**
@@ -1297,28 +1212,19 @@ export default class TagsInput extends BaseComponent {
      * @param {string} value The tag.
      * @param {HTMLElement} element The destination.
      * @param {TagsInputRenderer} renderer The consumer renderer.
-     * @returns {boolean} Whether the component remains live.
      */
     #renderContent(value, element, renderer) {
         const content = renderer.call(this, value, element);
 
         if (!this.node) {
-            return false;
+            return;
         }
 
         if (typeof content === 'string') {
-            const html = this.options.sanitize.call(this, content);
-
-            if (!this.node) {
-                return false;
-            }
-
-            $.setHtml(element, html);
+            $.setHtml(element, this.options.sanitize.call(this, content));
         } else if ($._isElement(content) && content !== element) {
             $.append(element, content);
         }
-
-        return Boolean(this.node);
     }
 
     /**
@@ -1340,7 +1246,7 @@ export default class TagsInput extends BaseComponent {
     /**
      * Renders a suggestion, stopping when the consumer disposes the component.
      * @param {string} value The suggestion value.
-     * @returns {HTMLLIElement|null} The option element, or null after disposal.
+     * @returns {HTMLLIElement} The option element.
      */
     #renderItem(value) {
         const classes = this.constructor.classes;
@@ -1360,9 +1266,7 @@ export default class TagsInput extends BaseComponent {
             $.addClass(element, classes.active);
         }
 
-        if (!this.#renderContent(value, element, this.options.renderResult)) {
-            return null;
-        }
+        this.#renderContent(value, element, this.options.renderResult);
 
         return element;
     }
@@ -1370,9 +1274,8 @@ export default class TagsInput extends BaseComponent {
     /**
      * Appends unique suggestions and initializes keyboard focus.
      * @param {string[]} results The results.
-     * @param {number} id The request generation.
      */
-    #renderResults(results, id) {
+    #renderResults(results) {
         const seen = new Set(this.#activeItems.map((element) => $.getAttribute(element, 'data-ui-value')));
 
         for (const value of results) {
@@ -1384,7 +1287,7 @@ export default class TagsInput extends BaseComponent {
 
             const element = this.#renderItem(value);
 
-            if (!element || id !== this.#requestId) {
+            if (!this.node) {
                 return;
             }
 
@@ -1403,9 +1306,8 @@ export default class TagsInput extends BaseComponent {
 
     /**
      * Builds tag chips in a fragment, leaving the editor and its focus intact.
-     * @param {number} id The value generation.
      */
-    #renderSelection(id) {
+    #renderSelection() {
         const fragment = $._callDomMethod(this.node.ownerDocument, 'createDocumentFragment');
         const classes = this.constructor.classes;
 
@@ -1413,7 +1315,9 @@ export default class TagsInput extends BaseComponent {
             const group = $.create('div', { class: classes.tagGroup, dataset: { uiTag: true } });
             const label = $.create('span', { class: classes.tagItem });
 
-            if (!this.#renderContent(value, label, this.options.renderSelection) || id !== this.#valueId) {
+            this.#renderContent(value, label, this.options.renderSelection);
+
+            if (!this.node) {
                 return;
             }
 
@@ -1452,7 +1356,7 @@ export default class TagsInput extends BaseComponent {
      * @param {boolean} [focus=true] Whether to refocus the editor.
      */
     #selectValue(value, focus = true) {
-        if (!this.node || $.is(this.node, ':disabled')) {
+        if ($.is(this.node, ':disabled')) {
             return;
         }
 
@@ -1483,37 +1387,25 @@ export default class TagsInput extends BaseComponent {
     }
 
     /**
-     * Normalizes and validates values before comparing and synchronizing selection.
+     * Normalizes and validates values before synchronizing selection.
      * @param {TagsInputValue|TagsInputValue[]|null|undefined} value The requested values.
      * @param {boolean} [notify=false] Whether this is a user change.
      */
     #setValue(value, notify = false) {
+        // Apply queued native mutations before synchronizing the requested values.
+        const records = this.#observer?.takeRecords() ?? [];
+        this.#refreshData(records);
+
+        const options = this.options;
+        let values = normalizeValues(value, options.trimValue)
+            .filter((entry) => options.validTag.call(this, entry));
+
         if (!this.node) {
             return;
         }
 
-        // Consume external option changes before discarding our own mutations.
-        this.#refreshData(this.#observer?.takeRecords() ?? []);
-
-        const id = ++this.#valueId;
-        const options = this.options;
-
-        const values = [];
-
-        for (const entry of normalizeValues(value, options.trimValue)) {
-            const valid = options.validTag.call(this, entry);
-
-            if (id !== this.#valueId) {
-                return;
-            }
-
-            if (valid) {
-                values.push(entry);
-            }
-        }
-
         if (this.#maxSelections) {
-            values.splice(this.#maxSelections);
+            values = values.slice(0, this.#maxSelections);
         }
 
         const changed = values.length !== this.#value.length ||
@@ -1521,33 +1413,6 @@ export default class TagsInput extends BaseComponent {
 
         this.#value = values;
 
-        this.#syncOptions();
-        this.#refresh(id);
-
-        if (id !== this.#valueId) {
-            return;
-        }
-
-        if (this.#open) {
-            this.#load();
-        }
-
-        if (id === this.#valueId && notify && changed) {
-            this.#notifying = true;
-
-            try {
-                $.triggerEvent(this.node, 'change.ui.tagsinput');
-            } finally {
-                this.#notifying = false;
-            }
-        }
-    }
-
-    /**
-     * Synchronizes native selection and removes unused generated options.
-     * Authored options and default selections retain their identities.
-     */
-    #syncOptions() {
         const lookup = new Map();
 
         for (const option of $.getProperty(this.node, 'options')) {
@@ -1580,7 +1445,36 @@ export default class TagsInput extends BaseComponent {
             }
         }
 
+        // Discard records from adding and removing generated options.
         this.#observer?.takeRecords();
+
+        this.#refresh();
+
+        if (!this.node) {
+            return;
+        }
+
+        if (records.length && $.is(this.node, ':disabled')) {
+            this.hide();
+
+            if (!this.node) {
+                return;
+            }
+        }
+
+        if (this.#open && !notify) {
+            this.#load();
+        }
+
+        if (notify && changed) {
+            this.#notifying = true;
+
+            try {
+                $.triggerEvent(this.node, 'change.ui.tagsinput');
+            } finally {
+                this.#notifying = false;
+            }
+        }
     }
 
     /**

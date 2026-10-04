@@ -209,10 +209,8 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 		#activeItems = [];
 		#ariaHidden;
 		#changeHandler;
-		#composing = false;
 		#container;
 		#data = [];
-		#dispatching = false;
 		#documentHandler;
 		#focusedItem = null;
 		#focusHandler;
@@ -243,7 +241,6 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 		#toggle;
 		#transitionId = 0;
 		#value = [];
-		#valueId = 0;
 		/**
 		* Creates a TagsInput and registers it with the native select.
 		* @param {HTMLSelectElement} node The multiple select.
@@ -279,65 +276,62 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			this.#setValue([...this.#value, value]);
 		}
 		/**
-		* Disables the editor and closes suggestions, including pending work.
+		* Disables the editor and hides suggestions.
 		*/
 		disable() {
-			if (this.node) {
-				_fr0st_query.default.setProperty(this.node, { disabled: true });
-				this.#refreshState();
-			}
+			_fr0st_query.default.setProperty(this.node, { disabled: true });
+			this.#refreshState();
+			this.hide();
 		}
-		/**
-		* Cancels owned work and restores the native control with its current values.
-		* Safe to call again or from a component callback.
-		*/
+		/** @inheritdoc */
 		dispose() {
 			if (!this.node) return;
-			const node = this.node;
 			this.#transitionId++;
-			this.#valueId++;
-			this.#observer?.disconnect();
+			this.#cancelSearch();
 			clearTimeout(this.#resetTimer);
 			this.#scrollHandler?.cancel();
+			this.#observer?.disconnect();
 			this.#popper?.dispose();
-			if (this.#focusHandler) _fr0st_query.default.removeEvent(node, "focus.ui.tagsinput", this.#focusHandler);
-			if (this.#changeHandler) _fr0st_query.default.removeEvent(node, "change.ui.tagsinput", this.#changeHandler);
-			if (this.#invalidHandler) _fr0st_query.default.removeEvent(node, "invalid.ui.tagsinput", this.#invalidHandler);
-			if (this.#documentHandler) _fr0st_query.default.removeEvent(node.ownerDocument, "click.ui.tagsinput", this.#documentHandler);
+			if (this.#focusHandler) _fr0st_query.default.removeEvent(this.node, "focus.ui.tagsinput", this.#focusHandler);
+			if (this.#changeHandler) _fr0st_query.default.removeEvent(this.node, "change.ui.tagsinput", this.#changeHandler);
+			if (this.#invalidHandler) _fr0st_query.default.removeEvent(this.node, "invalid.ui.tagsinput", this.#invalidHandler);
+			if (this.#documentHandler) _fr0st_query.default.removeEvent(this.node.ownerDocument, "click.ui.tagsinput", this.#documentHandler);
 			if (this.#form && this.#resetHandler) _fr0st_query.default.removeEvent(this.#form, "reset.ui.tagsinput", this.#resetHandler);
-			if (this.#hidden) _fr0st_query.default.addClass(node, this.constructor.classes.hide);
-			else _fr0st_query.default.removeClass(node, this.constructor.classes.hide);
-			for (const [name, value] of [["tabindex", this.#tabIndex], ["aria-hidden", this.#ariaHidden]]) if (value === null) _fr0st_query.default.removeAttribute(node, name);
-			else _fr0st_query.default.setAttribute(node, { [name]: value });
-			super.dispose();
-			this.#cancelSearch();
+			if (this.#hidden) _fr0st_query.default.addClass(this.node, this.constructor.classes.hide);
+			else _fr0st_query.default.removeClass(this.node, this.constructor.classes.hide);
+			for (const [name, value] of [["tabindex", this.#tabIndex], ["aria-hidden", this.#ariaHidden]]) if (value === null) _fr0st_query.default.removeAttribute(this.node, name);
+			else _fr0st_query.default.setAttribute(this.node, { [name]: value });
 			_fr0st_query.default.remove(this.#menuNode);
 			_fr0st_query.default.remove(this.#container);
 			this.#activeItems = [];
-			this.#focusedItem = null;
 			this.#data = [];
+			this.#focusedItem = null;
 			this.#generatedOptions.clear();
-			this.#value = [];
-			this.#open = false;
+			this.#changeHandler = null;
+			this.#documentHandler = null;
+			this.#focusHandler = null;
+			this.#invalidHandler = null;
+			this.#resetHandler = null;
 			this.#container = null;
 			this.#form = null;
 			this.#menuNode = null;
+			this.#observer = null;
 			this.#placeholder = null;
 			this.#popper = null;
 			this.#searchInput = null;
 			this.#toggle = null;
-			this.#observer = null;
 			this.#loadResults = null;
 			this.#scrollHandler = null;
+			this.#value = [];
+			this.#open = false;
+			super.dispose();
 		}
 		/**
 		* Enables the editor unless its containing fieldset remains disabled.
 		*/
 		enable() {
-			if (this.node) {
-				_fr0st_query.default.setProperty(this.node, { disabled: false });
-				this.#refreshState();
-			}
+			_fr0st_query.default.setProperty(this.node, { disabled: false });
+			this.#refreshState();
 		}
 		/**
 		* Gets the current selection limit.
@@ -364,14 +358,30 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 		* Hides suggestions unless the hide event is canceled.
 		*/
 		hide() {
-			this.#close();
+			if (!this.node || !this.#open || !_fr0st_query.default.triggerOne(this.node, "hide.ui.tagsinput") || !this.node) return;
+			this.#open = false;
+			this.#refreshFocus();
+			this.#cancelSearch();
+			this.#scrollHandler.cancel();
+			this.#focusItem(null);
+			_fr0st_query.default.setAttribute(this.#searchInput, { "aria-expanded": false });
+			const id = ++this.#transitionId;
+			_fr0st_query.default.removeClass(this.#menuNode, "show");
+			(0, _fr0st_ui.waitForTransition)(this.#menuNode, ["opacity"]).then(() => {
+				if (!this.node || id !== this.#transitionId) return;
+				this.#popper?.dispose();
+				this.#popper = null;
+				_fr0st_query.default.detach(this.#menuNode);
+				this.#clearResults();
+				_fr0st_query.default.triggerEvent(this.node, "hidden.ui.tagsinput");
+			});
 		}
 		/**
 		* Silently removes a tag.
 		* @param {TagsInputValue} value The value to remove.
 		*/
 		remove(value) {
-			const [key] = normalizeValues(value, this.options?.trimValue);
+			const [key] = normalizeValues(value, this.options.trimValue);
 			this.#setValue(this.#value.filter((entry) => entry !== key));
 		}
 		/**
@@ -394,7 +404,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 		*/
 		setPlaceholder(placeholder) {
 			this.#placeholderText = String(placeholder ?? "");
-			if (this.node) this.#refreshPlaceholder();
+			this.#refreshPlaceholder();
 		}
 		/**
 		* Silently selects normalized, validated tags; nullish values clear the selection.
@@ -407,20 +417,20 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 		* Shows suggestions, allowing an in-progress closing transition to reverse.
 		*/
 		show() {
-			if (!this.node || this.#open || _fr0st_query.default.is(this.node, ":disabled") || !this.#before("show")) return;
+			if (!this.node || this.#open || _fr0st_query.default.is(this.node, ":disabled") || !_fr0st_query.default.triggerOne(this.node, "show.ui.tagsinput") || !this.node) return;
 			this.#open = true;
+			this.#refreshFocus();
 			const id = ++this.#transitionId;
 			if (this.options.appendTo) _fr0st_query.default.append(this.options.appendTo, this.#menuNode);
 			else _fr0st_query.default.after(_fr0st_query.default.closest(this.#container, ".input-group")[0] || this.#container, this.#menuNode);
 			_fr0st_query.default.setAttribute(this.#searchInput, { "aria-expanded": "true" });
 			this.#load();
-			if (!this.node || !this.#open || id !== this.#transitionId) return;
+			if (!this.node) return;
 			this.#createPopper();
 			_fr0st_query.default.css(this.#menuNode, "opacity");
 			_fr0st_query.default.addClass(this.#menuNode, "show");
-			this.#refreshFocus();
 			(0, _fr0st_ui.waitForTransition)(this.#menuNode, ["opacity"]).then(() => {
-				if (this.node && this.#open && id === this.#transitionId) _fr0st_query.default.triggerEvent(this.node, "shown.ui.tagsinput");
+				if (this.node && id === this.#transitionId) _fr0st_query.default.triggerEvent(this.node, "shown.ui.tagsinput");
 			});
 		}
 		/**
@@ -434,24 +444,8 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 		* Updates the menu position and editor width.
 		*/
 		update() {
-			if (this.node) {
-				this.#updateSearchWidth();
-				this.#popper?.update();
-			}
-		}
-		/**
-		* Dispatches a cancellable lifecycle event, guarding recursive calls and disposal.
-		* @param {string} name The event name.
-		* @returns {boolean} Whether the operation can continue.
-		*/
-		#before(name) {
-			if (this.#dispatching) return false;
-			this.#dispatching = true;
-			try {
-				return _fr0st_query.default.triggerOne(this.node, `${name}.ui.tagsinput`) && Boolean(this.node);
-			} finally {
-				this.#dispatching = false;
-			}
+			this.#updateSearchWidth();
+			this.#popper?.update();
 		}
 		/**
 		* Binds reset handling to the select's current form, including external owners.
@@ -467,7 +461,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 		*/
 		#blur() {
 			if (!this.node || containsNode(this.#container, this.node.ownerDocument.activeElement)) return;
-			if (!_fr0st_query.default.is(this.node, ":disabled") && !this.#composing && _fr0st_query.default.getValue(this.#searchInput)) {
+			if (!_fr0st_query.default.is(this.node, ":disabled") && _fr0st_query.default.getValue(this.#searchInput)) {
 				if (this.options.confirmOnBlur) this.#selectValue(_fr0st_query.default.getValue(this.#searchInput), false);
 				else if (this.options.clearOnBlur) _fr0st_query.default.setValue(this.#searchInput, "");
 			}
@@ -484,7 +478,6 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 		#cancelSearch() {
 			this.#requestId++;
 			this.#loadResults?.cancel();
-			this.#scrollHandler?.cancel();
 			const request = this.#request;
 			this.#request = null;
 			this.#loading = false;
@@ -501,39 +494,10 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			_fr0st_query.default.empty(this.#menuNode);
 		}
 		/**
-		* Closes suggestions, optionally forcing closure when the control is disabled.
-		* @param {boolean} [force=false] Whether to bypass a canceled hide event.
-		*/
-		#close(force = false) {
-			if (!this.node || !this.#open) return;
-			const allowed = this.#before("hide");
-			if (!this.node || !allowed && !force) return;
-			this.#open = false;
-			const id = ++this.#transitionId;
-			this.#cancelSearch();
-			if (!this.node || this.#open || id !== this.#transitionId) return;
-			this.#showMore = false;
-			this.#focusItem(null);
-			_fr0st_query.default.setAttribute(this.#searchInput, { "aria-expanded": "false" });
-			_fr0st_query.default.removeClass(this.#menuNode, "show");
-			this.#refreshFocus();
-			(0, _fr0st_ui.waitForTransition)(this.#menuNode, ["opacity"]).then(() => {
-				if (!this.node || id !== this.#transitionId) return;
-				this.#popper?.dispose();
-				this.#popper = null;
-				_fr0st_query.default.detach(this.#menuNode);
-				this.#clearResults();
-				_fr0st_query.default.triggerEvent(this.node, "hidden.ui.tagsinput");
-			});
-		}
-		/**
 		* Positions the menu with the current UI Popper contract.
 		*/
 		#createPopper() {
-			if (this.#popper) {
-				this.#popper.update();
-				return;
-			}
+			if (this.#popper) return;
 			const options = {
 				reference: this.#toggle,
 				placement: this.options.placement,
@@ -604,6 +568,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 				const key = _fr0st_query.default.getAttribute(event.currentTarget, "data-ui-value");
 				const values = this.#value.filter((value) => value !== key);
 				this.#setValue(values, true);
+				if (this.node && this.#open) this.#load();
 				if (this.node) _fr0st_query.default.focus(this.#searchInput);
 			});
 			_fr0st_query.default.addEvent(this.#menuNode, "mousedown.ui.tagsinput", (event) => event.preventDefault());
@@ -614,16 +579,15 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			_fr0st_query.default.addEventDelegate(this.#menuNode, "mouseover.ui.tagsinput", "[data-ui-action=\"select\"]", (event) => {
 				this.#focusItem(event.currentTarget);
 			});
-			_fr0st_query.default.addEvent(this.#searchInput, "compositionstart.ui.tagsinput", () => {
-				this.#composing = true;
+			_fr0st_query.default.addEvent(this.#searchInput, "input.ui.tagsinput", (event) => {
+				if (_fr0st_query.default.is(this.node, ":disabled") || event.isComposing) return;
+				this.#updateSearchWidth();
+				this.#refreshPlaceholder();
+				if (this.#open) this.#load();
+				else this.show();
 			});
-			_fr0st_query.default.addEvent(this.#searchInput, "compositionend.ui.tagsinput", () => {
-				this.#composing = false;
-				this.#input();
-			});
-			_fr0st_query.default.addEvent(this.#searchInput, "input.ui.tagsinput", () => this.#input());
 			_fr0st_query.default.addEvent(this.#searchInput, "keydown.ui.tagsinput", (event) => {
-				if (!this.node || _fr0st_query.default.is(this.node, ":disabled") || event.isComposing || this.#composing || event.ctrlKey || event.altKey || event.metaKey) return;
+				if (_fr0st_query.default.is(this.node, ":disabled") || event.isComposing || event.ctrlKey || event.altKey || event.metaKey) return;
 				const key = event.key;
 				const active = this.#open ? this.#focusedItem : null;
 				if (key === "Enter" || this.options.confirmKeys.includes(key)) {
@@ -635,6 +599,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 				} else if (key === "Backspace" && !_fr0st_query.default.getValue(this.#searchInput) && this.#value.length) {
 					event.preventDefault();
 					this.#setValue(this.#value.slice(0, -1), true);
+					if (this.node && this.#open) this.#load();
 				} else if (key === "Escape" && this.#open) {
 					event.preventDefault();
 					event.stopPropagation();
@@ -655,10 +620,9 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 				}
 			});
 			this.#scrollHandler = _fr0st_query.default._throttle(() => {
-				if (this.node && this.#open && !this.#loading && this.#showMore) {
-					const menu = this.#menuNode;
-					if (_fr0st_query.default.getScrollY(menu) >= _fr0st_query.default.height(menu, { boxSize: _fr0st_query.default.SCROLL_BOX }) - _fr0st_query.default.height(menu) * 1.25) this.#load(this.#offset);
-				}
+				if (!this.node || !this.#open || this.#loading || !this.#showMore) return;
+				const list = this.#menuNode;
+				if (_fr0st_query.default.getScrollY(list) >= _fr0st_query.default.height(list, { boxSize: _fr0st_query.default.SCROLL_BOX }) - _fr0st_query.default.height(list) * 1.25) this.#load(this.#offset);
 			}, 250, { leading: false });
 			_fr0st_query.default.addEvent(this.#menuNode, "scroll.ui.tagsinput", this.#scrollHandler);
 			this.#observer = new MutationObserver((records) => {
@@ -669,6 +633,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 					this.#setValue(this.#readNativeValue());
 					this.#restoreFocus(focusedValue);
 				} else this.#refreshState();
+				if (_fr0st_query.default.is(this.node, ":disabled")) this.hide();
 			});
 			this.#observer.observe(this.node, {
 				attributes: true,
@@ -703,30 +668,30 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 		* @returns {Promise<void>} Resolves when the request settles.
 		*/
 		async #fetchResults(request, id) {
-			if (id !== this.#requestId) return;
+			if (!this.node || id !== this.#requestId) return;
 			try {
 				const result = this.options.getResults.call(this, request);
-				if (id !== this.#requestId) {
+				if (!this.node || id !== this.#requestId) {
 					result?.cancel?.();
 					return;
 				}
 				this.#request = result;
 				const response = await result;
-				if (id !== this.#requestId) return;
+				if (!this.node || id !== this.#requestId) return;
 				if (!Array.isArray(response?.results)) throw new TypeError("TagsInput results must be an array");
 				if (!request.offset) this.#clearResults();
 				else _fr0st_query.default.remove(_fr0st_query.default.children(this.#menuNode, "[role=\"status\"]"));
 				this.#offset = request.offset + response.results.length;
 				this.#showMore = Boolean(response.showMore) && response.results.length > 0;
-				this.#renderResults(normalizeValues(response.results), id);
+				this.#renderResults(normalizeValues(response.results));
 			} catch {
-				if (id === this.#requestId) {
+				if (this.node && id === this.#requestId) {
 					this.#showMore = false;
 					_fr0st_query.default.remove(_fr0st_query.default.children(this.#menuNode, "[role=\"status\"]"));
 					this.#renderInfo(this.options.lang.error);
 				}
 			} finally {
-				if (id === this.#requestId) {
+				if (this.node && id === this.#requestId) {
 					this.#request = null;
 					this.#loading = false;
 					this.update();
@@ -739,7 +704,6 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 		* @param {HTMLElement|null} element The active suggestion.
 		*/
 		#focusItem(element) {
-			if (!this.#menuNode) return;
 			_fr0st_query.default.removeClass(this.#focusedItem, this.constructor.classes.focus);
 			this.#focusedItem = element;
 			if (element) {
@@ -748,36 +712,14 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			} else _fr0st_query.default.removeAttribute(this.#searchInput, "aria-activedescendant");
 		}
 		/**
-		* Filters and sorts local suggestions, stopping an interrupted search.
+		* Filters and sorts local suggestions for the current search term.
 		* @param {string} term The search term.
-		* @param {number} id The request generation.
 		* @returns {string[]} The matching results.
 		*/
-		#getLocalResults(term, id) {
-			const data = this.#data.slice();
-			if (!term) return data;
+		#getLocalResults(term) {
+			if (!term) return this.#data;
 			const options = this.options;
-			const results = [];
-			for (const value of data) {
-				const match = options.isMatch.call(this, value, term);
-				if (id !== this.#requestId) return [];
-				if (match) results.push(value);
-			}
-			return results.sort((a, b) => id === this.#requestId ? options.sortResults.call(this, a, b, term) : 0);
-		}
-		/**
-		* Refreshes search sizing and suggestions after input, excluding IME composition.
-		*/
-		#input() {
-			if (!this.node || _fr0st_query.default.is(this.node, ":disabled")) return;
-			this.#updateSearchWidth();
-			this.#refreshPlaceholder();
-			if (this.#composing) {
-				this.#cancelSearch();
-				return;
-			}
-			if (this.#open) this.#load();
-			else this.show();
+			return this.#data.filter((value) => options.isMatch.call(this, value, term)).sort((a, b) => options.sortResults.call(this, a, b, term));
 		}
 		/**
 		* Loads suggestions for the current editor value.
@@ -785,8 +727,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 		*/
 		#load(offset = 0) {
 			this.#cancelSearch();
-			if (!this.node || !this.#open) return;
-			const id = this.#requestId;
+			if (!this.node) return;
 			if (!offset) {
 				this.#clearResults();
 				this.#offset = 0;
@@ -805,15 +746,15 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			} else if (typeof this.options.getResults === "function") {
 				this.#loading = true;
 				this.#renderInfo(this.options.lang.loading);
-				if (id === this.#requestId) this.#loadResults(term ? {
+				if (this.node) this.#loadResults(term ? {
 					offset,
 					term
-				} : { offset }, id);
+				} : { offset }, this.#requestId);
 			} else {
-				const results = this.#getLocalResults(term, id);
-				if (id === this.#requestId) this.#renderResults(results, id);
+				const results = this.#getLocalResults(term);
+				if (this.node) this.#renderResults(results);
 			}
-			this.update();
+			if (this.node) this.update();
 		}
 		/**
 		* Reads current native values without changing native option identities.
@@ -823,17 +764,14 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			return [..._fr0st_query.default.getProperty(this.node, "selectedOptions")].map((option) => _fr0st_query.default.getValue(option));
 		}
 		/**
-		* Refreshes the selection, control state, placeholder, and editor width.
-		* Consumer callbacks can dispose the component or replace its value.
-		* @param {number} id The value generation.
+		* Refreshes the selection, placeholder, control state, and editor width.
 		*/
-		#refresh(id) {
-			this.#renderSelection(id);
-			if (id !== this.#valueId) return;
-			this.#refreshState();
-			if (id !== this.#valueId) return;
+		#refresh() {
+			this.#renderSelection();
+			if (!this.node) return;
 			this.#refreshPlaceholder();
-			if (id !== this.#valueId) return;
+			if (!this.node) return;
+			this.#refreshState();
 			this.#updateSearchWidth();
 		}
 		/**
@@ -881,9 +819,11 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 				disabled,
 				tabIndex: disabled ? -1 : Number(this.#tabIndex ?? 0)
 			});
-			_fr0st_query.default.setAttribute(this.#searchInput, { "aria-disabled": String(disabled) });
-			_fr0st_query.default.setAttribute(this.#searchInput, { "aria-required": String(_fr0st_query.default.getProperty(this.node, "required")) });
-			for (const button of _fr0st_query.default.find("button", this.#toggle)) _fr0st_query.default.setProperty(button, { disabled });
+			_fr0st_query.default.setAttribute(this.#searchInput, {
+				"aria-disabled": disabled,
+				"aria-required": Boolean(_fr0st_query.default.getProperty(this.node, "required"))
+			});
+			_fr0st_query.default.setProperty(_fr0st_query.default.find("button", this.#toggle), { disabled });
 			const direction = _fr0st_query.default.css(this.node, "direction");
 			_fr0st_query.default.setProperty([this.#container, this.#menuNode], { dir: direction });
 			_fr0st_query.default.removeClass(this.#menuNode, [classes.menuSmall, classes.menuLarge]);
@@ -904,7 +844,6 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			_fr0st_query.default.setAttribute(this.#menuNode, { "aria-label": label });
 			if (this.#invalid && !_fr0st_query.default.getProperty(this.node, "validity").valid) _fr0st_query.default.setAttribute(this.#searchInput, { "aria-invalid": "true" });
 			this.#refreshFocus();
-			if (disabled) this.#close(true);
 		}
 		/**
 		* Builds the wrapper, editable combobox, and detached suggestion listbox.
@@ -980,17 +919,12 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 		* @param {string} value The tag.
 		* @param {HTMLElement} element The destination.
 		* @param {TagsInputRenderer} renderer The consumer renderer.
-		* @returns {boolean} Whether the component remains live.
 		*/
 		#renderContent(value, element, renderer) {
 			const content = renderer.call(this, value, element);
-			if (!this.node) return false;
-			if (typeof content === "string") {
-				const html = this.options.sanitize.call(this, content);
-				if (!this.node) return false;
-				_fr0st_query.default.setHtml(element, html);
-			} else if (_fr0st_query.default._isElement(content) && content !== element) _fr0st_query.default.append(element, content);
-			return Boolean(this.node);
+			if (!this.node) return;
+			if (typeof content === "string") _fr0st_query.default.setHtml(element, this.options.sanitize.call(this, content));
+			else if (_fr0st_query.default._isElement(content) && content !== element) _fr0st_query.default.append(element, content);
 		}
 		/**
 		* Appends a sanitized status message.
@@ -1007,7 +941,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 		/**
 		* Renders a suggestion, stopping when the consumer disposes the component.
 		* @param {string} value The suggestion value.
-		* @returns {HTMLLIElement|null} The option element, or null after disposal.
+		* @returns {HTMLLIElement} The option element.
 		*/
 		#renderItem(value) {
 			const classes = this.constructor.classes;
@@ -1026,21 +960,20 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 				}
 			});
 			if (selected) _fr0st_query.default.addClass(element, classes.active);
-			if (!this.#renderContent(value, element, this.options.renderResult)) return null;
+			this.#renderContent(value, element, this.options.renderResult);
 			return element;
 		}
 		/**
 		* Appends unique suggestions and initializes keyboard focus.
 		* @param {string[]} results The results.
-		* @param {number} id The request generation.
 		*/
-		#renderResults(results, id) {
+		#renderResults(results) {
 			const seen = new Set(this.#activeItems.map((element) => _fr0st_query.default.getAttribute(element, "data-ui-value")));
 			for (const value of results) {
 				if (seen.has(value)) continue;
 				seen.add(value);
 				const element = this.#renderItem(value);
-				if (!element || id !== this.#requestId) return;
+				if (!this.node) return;
 				this.#activeItems.push(element);
 				_fr0st_query.default.append(this.#menuNode, element);
 			}
@@ -1049,9 +982,8 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 		}
 		/**
 		* Builds tag chips in a fragment, leaving the editor and its focus intact.
-		* @param {number} id The value generation.
 		*/
-		#renderSelection(id) {
+		#renderSelection() {
 			const fragment = _fr0st_query.default._callDomMethod(this.node.ownerDocument, "createDocumentFragment");
 			const classes = this.constructor.classes;
 			for (const value of this.#value) {
@@ -1060,7 +992,8 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 					dataset: { uiTag: true }
 				});
 				const label = _fr0st_query.default.create("span", { class: classes.tagItem });
-				if (!this.#renderContent(value, label, this.options.renderSelection) || id !== this.#valueId) return;
+				this.#renderContent(value, label, this.options.renderSelection);
+				if (!this.node) return;
 				if (this.options.showClear) _fr0st_query.default.append(group, this.#renderClear(value));
 				_fr0st_query.default.append(group, label);
 				_fr0st_query.default.append(fragment, group);
@@ -1086,7 +1019,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 		* @param {boolean} [focus=true] Whether to refocus the editor.
 		*/
 		#selectValue(value, focus = true) {
-			if (!this.node || _fr0st_query.default.is(this.node, ":disabled")) return;
+			if (_fr0st_query.default.is(this.node, ":disabled")) return;
 			this.#setValue([...this.#value, value], true);
 			if (!this.node) return;
 			_fr0st_query.default.setValue(this.#searchInput, "");
@@ -1098,42 +1031,19 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			if (this.node && focus) _fr0st_query.default.focus(this.#searchInput);
 		}
 		/**
-		* Normalizes and validates values before comparing and synchronizing selection.
+		* Normalizes and validates values before synchronizing selection.
 		* @param {TagsInputValue|TagsInputValue[]|null|undefined} value The requested values.
 		* @param {boolean} [notify=false] Whether this is a user change.
 		*/
 		#setValue(value, notify = false) {
-			if (!this.node) return;
-			this.#refreshData(this.#observer?.takeRecords() ?? []);
-			const id = ++this.#valueId;
+			const records = this.#observer?.takeRecords() ?? [];
+			this.#refreshData(records);
 			const options = this.options;
-			const values = [];
-			for (const entry of normalizeValues(value, options.trimValue)) {
-				const valid = options.validTag.call(this, entry);
-				if (id !== this.#valueId) return;
-				if (valid) values.push(entry);
-			}
-			if (this.#maxSelections) values.splice(this.#maxSelections);
+			let values = normalizeValues(value, options.trimValue).filter((entry) => options.validTag.call(this, entry));
+			if (!this.node) return;
+			if (this.#maxSelections) values = values.slice(0, this.#maxSelections);
 			const changed = values.length !== this.#value.length || values.some((entry, index) => entry !== this.#value[index]);
 			this.#value = values;
-			this.#syncOptions();
-			this.#refresh(id);
-			if (id !== this.#valueId) return;
-			if (this.#open) this.#load();
-			if (id === this.#valueId && notify && changed) {
-				this.#notifying = true;
-				try {
-					_fr0st_query.default.triggerEvent(this.node, "change.ui.tagsinput");
-				} finally {
-					this.#notifying = false;
-				}
-			}
-		}
-		/**
-		* Synchronizes native selection and removes unused generated options.
-		* Authored options and default selections retain their identities.
-		*/
-		#syncOptions() {
 			const lookup = /* @__PURE__ */ new Map();
 			for (const option of _fr0st_query.default.getProperty(this.node, "options")) {
 				_fr0st_query.default.setProperty(option, { selected: false });
@@ -1156,6 +1066,21 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 				this.#generatedOptions.delete(option);
 			}
 			this.#observer?.takeRecords();
+			this.#refresh();
+			if (!this.node) return;
+			if (records.length && _fr0st_query.default.is(this.node, ":disabled")) {
+				this.hide();
+				if (!this.node) return;
+			}
+			if (this.#open && !notify) this.#load();
+			if (notify && changed) {
+				this.#notifying = true;
+				try {
+					_fr0st_query.default.triggerEvent(this.node, "change.ui.tagsinput");
+				} finally {
+					this.#notifying = false;
+				}
+			}
 		}
 		/**
 		* Sizes the editor using its complete font metrics; CSS bounds the result.

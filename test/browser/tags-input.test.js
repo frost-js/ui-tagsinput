@@ -266,34 +266,6 @@ test.describe('TagsInput', () => {
     });
 
     test.describe('#setValue', () => {
-        for (const callback of ['validTag', 'renderSelection', 'sanitize']) {
-            test(`keeps a value set inside ${callback}`, async ({ page }) => {
-                const value = await page.evaluate((callback) => {
-                    let replace = false;
-                    const options = {
-                        [callback](value) {
-                            if (replace) {
-                                replace = false;
-                                this.setValue(['Cherry']);
-                            }
-
-                            return callback === 'validTag' ? true : value;
-                        },
-                    };
-                    const instance = UI.TagsInput.init($.findOne('#tags'), options);
-                    replace = true;
-                    instance.setValue(['Banana', 'Outer']);
-
-                    return instance.getValue();
-                }, callback);
-
-                expect(value).toEqual(['Cherry']);
-                await expect(page.locator('#tags')).toHaveValues(['Cherry']);
-                await expect(page.locator('.tagsinput-selection')).toHaveText(['Cherry']);
-                await expect(page.locator('#tags option[value="Outer"]')).toHaveCount(0);
-            });
-        }
-
         for (const { name, value, expected } of [
             { name: 'null', value: null, expected: [] },
             { name: 'undefined', value: undefined, expected: [] },
@@ -491,18 +463,6 @@ test.describe('TagsInput', () => {
             await expect.poll(() => page.evaluate(() => window.events.join(','))).toBe('shown');
             await expect(page.getByRole('combobox')).toHaveAttribute('aria-expanded', 'true');
         });
-
-        test('guards recursive calls from show and hide listeners', async ({ page }) => {
-            await page.evaluate(() => {
-                const instance = UI.TagsInput.init($.findOne('#tags'), { minSearch: 0 });
-                $.addEvent('#tags', 'show.ui.tagsinput', () => instance.show());
-                $.addEvent('#tags', 'hide.ui.tagsinput', () => instance.hide());
-                instance.show();
-            });
-            await expect(page.getByRole('listbox')).toBeVisible();
-            await page.evaluate(() => $('#tags').tagsinput('hide'));
-            await expect(page.locator('.tagsinput-menu')).toHaveCount(0);
-        });
     });
 
     test.describe('user events', () => {
@@ -580,14 +540,41 @@ test.describe('TagsInput', () => {
             await page.evaluate(() => UI.TagsInput.init($.findOne('#tags')));
             const control = page.getByRole('combobox');
             await control.fill('New');
-            await control.dispatchEvent('compositionstart');
-            await control.press(',');
+            await control.dispatchEvent('keydown', { key: ',', isComposing: true });
             await expect(page.locator('#tags')).toHaveValues(['Apple']);
-            await control.dispatchEvent('compositionend');
             await control.fill('New');
             await control.press('Enter');
             await expect(page.locator('#tags')).toHaveValues(['Apple', 'New']);
         });
+    });
+
+    test('waits for non-composing input before searching', async ({ page }) => {
+        await page.evaluate(() => {
+            window.matches = 0;
+            UI.TagsInput.init($.findOne('#tags'), {
+                isMatch(value, term) {
+                    window.matches++;
+
+                    return value.includes(term);
+                },
+            });
+            $.setValue('.tagsinput-input', 'Ban');
+        });
+
+        const control = page.getByRole('combobox');
+        await control.evaluate((node) => node.dispatchEvent(new InputEvent('input', {
+            bubbles: true,
+            isComposing: true,
+        })));
+        await expect(control).toHaveAttribute('aria-expanded', 'false');
+        expect(await page.evaluate(() => window.matches)).toBe(0);
+
+        await control.evaluate((node) => node.dispatchEvent(new InputEvent('input', {
+            bubbles: true,
+            isComposing: false,
+        })));
+        await expect(page.getByRole('option')).toHaveText(['Banana']);
+        expect(await page.evaluate(() => window.matches)).toBe(3);
     });
 
     test.describe('data option', () => {
@@ -632,27 +619,6 @@ test.describe('TagsInput', () => {
             await page.getByRole('combobox').fill('anything');
             await expect(page.getByRole('option')).toHaveText(['Cherry', 'Apple']);
         });
-
-        for (const callback of ['isMatch', 'sortResults']) {
-            test(`stops calling ${callback} after disposal`, async ({ page }) => {
-                await page.evaluate((callback) => {
-                    window.calls = 0;
-                    const options = { isMatch: () => true };
-                    options[callback] = function() {
-                        window.calls++;
-                        this.dispose();
-
-                        return callback === 'isMatch' ? true : 0;
-                    };
-
-                    UI.TagsInput.init($.findOne('#tags'), options);
-                }, callback);
-
-                await page.getByRole('combobox').fill('anything');
-                await expect(page.locator('.tagsinput-container, .tagsinput-menu')).toHaveCount(0);
-                expect(await page.evaluate(() => window.calls)).toBe(1);
-            });
-        }
     });
 
     test.describe('minSearch option', () => {
@@ -686,16 +652,24 @@ test.describe('TagsInput', () => {
     });
 
     test.describe('maxSelections option', () => {
-        test('announces the limit and permits another choice after removal', async ({ page }) => {
-            await page.evaluate(() => UI.TagsInput.init($.findOne('#tags'), {
-                maxSelections: 1, closeOnSelect: false, minSearch: 0,
-            }).show());
-            await expect(page.getByRole('status')).toHaveText('Selection limit reached.');
-            await page.getByRole('button', { name: 'Remove selection: Apple' }).press('Enter');
-            await page.getByRole('option', { name: 'Banana', exact: true }).click();
-            await expect(page.locator('#tags')).toHaveValues(['Banana']);
-            await expect(page.getByRole('status')).toHaveText('Selection limit reached.');
-        });
+        for (const removal of ['clear button', 'Backspace']) {
+            test(`announces the limit and permits another choice after removal with ${removal}`, async ({ page }) => {
+                await page.evaluate(() => UI.TagsInput.init($.findOne('#tags'), {
+                    maxSelections: 1, closeOnSelect: false, minSearch: 0,
+                }).show());
+                await expect(page.getByRole('status')).toHaveText('Selection limit reached.');
+
+                if (removal === 'Backspace') {
+                    await page.getByRole('combobox').press('Backspace');
+                } else {
+                    await page.getByRole('button', { name: 'Remove selection: Apple' }).press('Enter');
+                }
+
+                await page.getByRole('option', { name: 'Banana', exact: true }).click();
+                await expect(page.locator('#tags')).toHaveValues(['Banana']);
+                await expect(page.getByRole('status')).toHaveText('Selection limit reached.');
+            });
+        }
     });
 
     test.describe('confirmKeys option', () => {

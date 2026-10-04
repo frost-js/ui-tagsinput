@@ -235,7 +235,7 @@ test.describe('TagsInput forms', () => {
             });
         }
 
-        test('clears suggestion focus when option changes and disabling are observed together', async ({ page }) => {
+        test('honors hide cancellation when option changes and disabling are observed together', async ({ page }) => {
             await page.evaluate(() => {
                 UI.TagsInput.init($.findOne('#tags'), { minSearch: 0 }).show();
                 $.addEvent('#tags', 'hide.ui.tagsinput', (event) => event.preventDefault());
@@ -245,8 +245,10 @@ test.describe('TagsInput forms', () => {
 
             const control = page.getByRole('combobox');
             await expect(control).toBeDisabled();
-            await expect(control).not.toHaveAttribute('aria-activedescendant');
-            await expect(page.locator('.tagsinput-menu')).toHaveCount(0);
+            await expect(control).toHaveAttribute('aria-expanded', 'true');
+            const option = page.getByRole('option', { name: 'Apple', exact: true });
+            await expect(control).toHaveAttribute('aria-activedescendant', await option.getAttribute('id'));
+            await expect(page.locator('.tagsinput-menu')).toBeVisible();
             await expect(page.locator('#tags')).toHaveValues(['Apple']);
             expect(await page.evaluate(() => window.changes)).toBe(0);
         });
@@ -264,7 +266,7 @@ test.describe('TagsInput forms', () => {
             await expect(page.getByRole('combobox')).toBeEnabled();
         });
 
-        test('closes a disabled control even when hide is canceled', async ({ page }) => {
+        test('honors hide cancellation when disabling the control', async ({ page }) => {
             await page.evaluate(() => {
                 const instance = UI.TagsInput.init($.findOne('#tags'), { minSearch: 0 });
                 instance.show();
@@ -272,7 +274,8 @@ test.describe('TagsInput forms', () => {
                 instance.disable();
             });
             await expect(page.getByRole('combobox')).toBeDisabled();
-            await expect(page.locator('.tagsinput-menu')).toHaveCount(0);
+            await expect(page.getByRole('combobox')).toHaveAttribute('aria-expanded', 'true');
+            await expect(page.locator('.tagsinput-menu')).toBeVisible();
         });
     });
 
