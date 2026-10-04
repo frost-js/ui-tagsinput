@@ -1,3 +1,5 @@
+/** @import { TagsInputValue } from './tags-input.js'; */
+
 import $ from '@fr0st/query';
 
 /**
@@ -35,13 +37,12 @@ export function normalizeText(value) {
 
 /**
  * Copies scalar or array values into unique strings, excluding nullish values.
- * @param {string|number|(string|number)[]|null|undefined} value The values.
+ * @param {TagsInputValue|TagsInputValue[]|null|undefined} value The values.
  * @param {boolean} [trim=false] Whether to trim each value.
  * @returns {string[]} The normalized values.
  */
 export function normalizeValues(value, trim = false) {
     const values = Array.isArray(value) ? value : [value];
-
     const entries = values
         .filter((entry) => entry !== null && entry !== undefined)
         .map((entry) => trim ? String(entry).trim() : String(entry));

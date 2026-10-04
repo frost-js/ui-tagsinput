@@ -11,21 +11,22 @@ const ariaAttributes = [
 
 /** @typedef {string|number} TagsInputValue */
 /**
+ * @typedef {object} TagsInputResults
+ * @property {TagsInputValue[]} results The suggested tags.
+ * @property {boolean} [showMore=false] Whether another page is available.
+ */
+/**
  * @typedef {object} TagsInputRequest
  * @property {number} offset The number of results already received.
  * @property {string} [term] The search term, omitted when empty.
  */
 /**
- * @typedef {object} TagsInputResults
- * @property {TagsInputValue[]} results The suggested tags.
- * @property {boolean} [showMore=false] Whether another page is available.
- */
-/** @typedef {(TagsInputResults|PromiseLike<TagsInputResults>) & {cancel?: Function}} TagsInputPendingResults */
-/**
- * @callback TagsInputGetResults
- * @this {TagsInput}
- * @param {TagsInputRequest} request The search request.
- * @returns {TagsInputPendingResults} Results or a promise, optionally exposing cancellation.
+ * @typedef {object} TagsInputLanguage
+ * @property {string} [clear] The removal button label, followed by the tag.
+ * @property {string} [error] The loading error message.
+ * @property {string} [loading] The loading message.
+ * @property {string} [maxSelections] The selection limit message.
+ * @property {string} [search] The editor label when the select has no label.
  */
 /**
  * @callback TagsInputRenderer
@@ -34,13 +35,39 @@ const ariaAttributes = [
  * @param {HTMLElement} element The destination, which can be filled directly.
  * @returns {string|HTMLElement|void} HTML to sanitize, an element, or nothing.
  */
+/** @typedef {(TagsInputResults|PromiseLike<TagsInputResults>) & {cancel?: Function}} TagsInputPendingResults */
 /**
- * @typedef {object} TagsInputLanguage
- * @property {string} [clear='Remove selection'] The removal button label, followed by the tag.
- * @property {string} [error='Error loading data.'] The request error message.
- * @property {string} [loading='Loading..'] The loading message.
- * @property {string} [maxSelections='Selection limit reached.'] The selection limit message.
- * @property {string} [search='Search'] The editor label when the select has no label.
+ * @callback TagsInputGetResults
+ * @this {TagsInput}
+ * @param {TagsInputRequest} request The search request.
+ * @returns {TagsInputPendingResults} Results or a promise, optionally exposing a cancel method.
+ */
+/**
+ * @callback TagsInputSanitizeCallback
+ * @this {TagsInput}
+ * @param {string} html The rendered HTML.
+ * @returns {string} The sanitized HTML.
+ */
+/**
+ * @callback TagsInputMatchCallback
+ * @this {TagsInput}
+ * @param {string} value The value to match.
+ * @param {string} term The search term.
+ * @returns {boolean} Whether the value matches.
+ */
+/**
+ * @callback TagsInputSortCallback
+ * @this {TagsInput}
+ * @param {string} a The first value.
+ * @param {string} b The second value.
+ * @param {string} term The search term.
+ * @returns {number} The relative sort order.
+ */
+/**
+ * @callback TagsInputValidTagCallback
+ * @this {TagsInput}
+ * @param {string} value The normalized tag value.
+ * @returns {boolean} Whether the tag is valid.
  */
 /**
  * @typedef {object} TagsInputOptions
@@ -48,12 +75,12 @@ const ariaAttributes = [
  * @property {TagsInputLanguage} [lang] The interface labels.
  * @property {TagsInputValue[]|null} [data=null] Local suggestions; null reads native options.
  * @property {TagsInputGetResults|null} [getResults=null] Loads remote suggestions.
- * @property {TagsInputRenderer} [renderResult] Renders a suggestion; defaults to its value.
- * @property {TagsInputRenderer} [renderSelection] Renders a tag; defaults to its value.
- * @property {function(string): string} [sanitize] Sanitizes HTML; defaults to fQuery's sanitizer.
- * @property {function(string, string): boolean} [isMatch] Matches a value and search term.
- * @property {function(string, string, string): number} [sortResults] Compares two values for a term.
- * @property {function(string): boolean} [validTag] Validates a normalized tag; defaults to nonempty strings.
+ * @property {TagsInputRenderer} [renderResult] Renders a suggestion.
+ * @property {TagsInputRenderer} [renderSelection] Renders a tag.
+ * @property {TagsInputSanitizeCallback} [sanitize] Sanitizes rendered HTML.
+ * @property {TagsInputMatchCallback} [isMatch] Matches a local suggestion.
+ * @property {TagsInputSortCallback} [sortResults] Sorts local search results.
+ * @property {TagsInputValidTagCallback} [validTag] Validates a normalized tag.
  * @property {boolean} [trimValue=false] Trims values before validation and deduplication.
  * @property {number} [maxSelections=0] The selection limit; zero means unlimited.
  * @property {number} [minSearch=1] The minimum suggestion search length.
@@ -76,11 +103,10 @@ const ariaAttributes = [
 
 /**
  * Controls editable tags backed by a native multiple select.
- * Callbacks run with the component as `this`. Programmatic setters are silent;
- * effective user changes emit change.ui.tagsinput. Disposal restores the select.
  * @augments {BaseComponent<TagsInputOptions>}
  */
 export default class TagsInput extends BaseComponent {
+    // TagsInput classes
     static classes = {
         active: 'active',
         container: 'form-input tagsinput-container',
@@ -116,13 +142,16 @@ export default class TagsInput extends BaseComponent {
         renderResult: (value) => value,
         renderSelection: (value) => value,
         sanitize: (input) => $.sanitize(input),
-        isMatch: (value, term) => normalizeText(value).includes(normalizeText(term)),
+        isMatch(value, term) {
+            return normalizeText(value).includes(normalizeText(term));
+        },
         sortResults(a, b, term) {
-            const first = normalizeText(a);
-            const second = normalizeText(b);
-            const search = normalizeText(term);
+            const aNormalized = normalizeText(a);
+            const bNormalized = normalizeText(b);
+            const termNormalized = normalizeText(term);
+            const diff = aNormalized.indexOf(termNormalized) - bNormalized.indexOf(termNormalized);
 
-            return first.indexOf(search) - second.indexOf(search) || first.localeCompare(second);
+            return diff || aNormalized.localeCompare(bNormalized);
         },
         validTag: (value) => Boolean(value),
         trimValue: false,
@@ -491,7 +520,7 @@ export default class TagsInput extends BaseComponent {
     }
 
     /**
-     * Invalidates queued and in-flight requests before calling consumer cancellation.
+     * Cancels queued and in-flight search requests.
      */
     #cancelSearch() {
         this.#requestId++;
@@ -600,38 +629,40 @@ export default class TagsInput extends BaseComponent {
 
         $.addEvent(this.#container, 'focusout.ui.tagsinput', (event) => {
             // Focusout can checkpoint microtasks before the next control gains focus.
-            if (!containsNode(this.#container, event.relatedTarget)) {
-                queueMicrotask(() => {
-                    if (!this.node || containsNode(this.#container, this.node.ownerDocument.activeElement)) {
-                        return;
-                    }
-
-                    if (!$.is(this.node, ':disabled') && $.getValue(this.#searchInput)) {
-                        if (this.options.confirmOnBlur) {
-                            this.#selectValue($.getValue(this.#searchInput), false);
-                        } else if (this.options.clearOnBlur) {
-                            $.setValue(this.#searchInput, '');
-                        }
-                    }
-
-                    if (!this.node) {
-                        return;
-                    }
-
-                    this.hide();
-
-                    if (!this.node) {
-                        return;
-                    }
-
-                    this.#refreshFocus();
-                    this.#refreshPlaceholder();
-
-                    if (this.node) {
-                        this.#updateSearchWidth();
-                    }
-                });
+            if (containsNode(this.#container, event.relatedTarget)) {
+                return;
             }
+
+            queueMicrotask(() => {
+                if (!this.node || containsNode(this.#container, this.node.ownerDocument.activeElement)) {
+                    return;
+                }
+
+                if (!$.is(this.node, ':disabled') && $.getValue(this.#searchInput)) {
+                    if (this.options.confirmOnBlur) {
+                        this.#selectValue($.getValue(this.#searchInput), false);
+                    } else if (this.options.clearOnBlur) {
+                        $.setValue(this.#searchInput, '');
+                    }
+                }
+
+                if (!this.node) {
+                    return;
+                }
+
+                this.hide();
+
+                if (!this.node) {
+                    return;
+                }
+
+                this.#refreshFocus();
+                this.#refreshPlaceholder();
+
+                if (this.node) {
+                    this.#updateSearchWidth();
+                }
+            });
         });
 
         $.addEvent(this.#container, 'click.ui.tagsinput', (event) => {
@@ -812,7 +843,7 @@ export default class TagsInput extends BaseComponent {
     }
 
     /**
-     * Fetches a page while guarding consumer callbacks and stale continuations.
+     * Loads a remote result page, catching synchronous and asynchronous errors.
      * @param {TagsInputRequest} request The request parameters.
      * @param {number} id The request generation.
      * @returns {Promise<void>} Resolves when the request settles.
@@ -898,9 +929,13 @@ export default class TagsInput extends BaseComponent {
         }
 
         const options = this.options;
-        const results = this.#data.filter((value) => options.isMatch.call(this, value, term));
+        const results = this.#data.filter((value) =>
+            options.isMatch.call(this, value, term),
+        );
 
-        return results.sort((a, b) => options.sortResults.call(this, a, b, term));
+        return results.sort((a, b) =>
+            options.sortResults.call(this, a, b, term),
+        );
     }
 
     /**
@@ -935,7 +970,6 @@ export default class TagsInput extends BaseComponent {
         } else if (typeof this.options.getResults === 'function') {
             this.#loading = true;
             this.#renderInfo(this.options.lang.loading);
-
             this.#loadResults(term ? { offset, term } : { offset }, this.#requestId);
         } else {
             this.#renderResults(this.#getLocalResults(term));
@@ -1022,7 +1056,7 @@ export default class TagsInput extends BaseComponent {
     }
 
     /**
-     * Synchronizes editor attributes, styling, and disabled state.
+     * Synchronizes disabled, required, and accessible attributes with the native control.
      */
     #refreshState() {
         const disabled = $.is(this.node, ':disabled');
@@ -1156,7 +1190,7 @@ export default class TagsInput extends BaseComponent {
     }
 
     /**
-     * Renders callback output, stopping when the consumer disposes the component.
+     * Renders callback output, sanitizing strings but preserving supplied nodes.
      * @param {string} value The tag.
      * @param {HTMLElement} element The destination.
      * @param {TagsInputRenderer} renderer The consumer renderer.
@@ -1192,7 +1226,7 @@ export default class TagsInput extends BaseComponent {
     }
 
     /**
-     * Renders a suggestion, stopping when the consumer disposes the component.
+     * Renders a suggestion with its selection state.
      * @param {string} value The suggestion value.
      * @returns {HTMLLIElement} The option element.
      */
@@ -1256,9 +1290,9 @@ export default class TagsInput extends BaseComponent {
      * Rebuilds tag chips before the editor, leaving its focus intact.
      */
     #renderSelection() {
-        $.remove($.children(this.#toggle, '[data-ui-tag]'));
-
         const classes = this.constructor.classes;
+
+        $.remove($.children(this.#toggle, '[data-ui-tag]'));
 
         for (const value of this.#value) {
             const group = $.create('div', { class: classes.tagGroup, dataset: { uiTag: true } });
@@ -1420,7 +1454,7 @@ export default class TagsInput extends BaseComponent {
     }
 
     /**
-     * Sizes the editor using its complete font metrics; CSS bounds the result.
+     * Sizes the editor to its text.
      */
     #updateSearchWidth() {
         const span = $.create('span', {
@@ -1433,9 +1467,10 @@ export default class TagsInput extends BaseComponent {
                 whiteSpace: 'pre',
             },
         });
-
         $.append(this.node.ownerDocument.body, span);
+
         $.setStyle(this.#searchInput, 'width', `${$.width(span) + 2}px`);
+
         $.remove(span);
     }
 }
