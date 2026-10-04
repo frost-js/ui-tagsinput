@@ -144,6 +144,45 @@ test.describe('TagsInput forms', () => {
             expect(await page.evaluate(() => window.changes)).toBe(0);
         });
 
+        test('prefers aria-labelledby and restores the fallback accessible label', async ({ page }) => {
+            await page.evaluate(() => {
+                $.append(document.body, '<span id="name">Choose fruit</span>');
+                const node = $.findOne('#tags');
+                $.setAttribute(node, { 'aria-label': 'Favorite fruit', 'aria-labelledby': 'name' });
+                UI.TagsInput.init(node);
+            });
+            const control = page.getByRole('combobox');
+            await expect(control).toHaveAccessibleName('Choose fruit');
+            await expect(control).toHaveAttribute('aria-labelledby', 'name');
+            await expect(control).not.toHaveAttribute('aria-label');
+
+            await page.evaluate(() => $.removeAttribute('#tags', 'aria-labelledby'));
+            await expect(control).toHaveAccessibleName('Favorite fruit');
+            await expect(control).not.toHaveAttribute('aria-labelledby');
+            await expect(control).toHaveAttribute('aria-label', 'Favorite fruit');
+
+            await page.evaluate(() => $.removeAttribute('#tags', 'aria-label'));
+            await expect(control).toHaveAccessibleName('Fruit');
+        });
+
+        test('synchronizes aria-required overrides and falls back to native required', async ({ page }) => {
+            await page.evaluate(() => {
+                $.setProperty('#tags', 'required', true);
+                UI.TagsInput.init($.findOne('#tags'));
+            });
+            const control = page.getByRole('combobox');
+            await expect(control).toHaveAttribute('aria-required', 'true');
+
+            await page.evaluate(() => $.setAttribute('#tags', 'aria-required', 'false'));
+            await expect(control).toHaveAttribute('aria-required', 'false');
+
+            await page.evaluate(() => $.removeAttribute('#tags', 'aria-required'));
+            await expect(control).toHaveAttribute('aria-required', 'true');
+
+            await page.evaluate(() => $.setProperty('#tags', 'required', false));
+            await expect(control).toHaveAttribute('aria-required', 'false');
+        });
+
         test('updates accessible labels, descriptions, and error references', async ({ page }) => {
             await page.evaluate(() => {
                 const node = $.findOne('#tags');
@@ -199,7 +238,7 @@ test.describe('TagsInput forms', () => {
     });
 
     test.describe('validation', () => {
-        test('preserves native required validation and redirects invalid focus', async ({ page }) => {
+        test('preserves native required validation', async ({ page }) => {
             await page.evaluate(() => {
                 const node = $.findOne('#tags');
                 $.setProperty(node, 'required', true);
@@ -208,7 +247,7 @@ test.describe('TagsInput forms', () => {
             expect(await page.locator('#tags').evaluate((node) => node.validity.valueMissing)).toBe(true);
             await page.getByRole('button', { name: 'Submit', exact: true }).click();
             await expect(page.getByRole('combobox')).toBeFocused();
-            await expect(page.getByRole('combobox')).toHaveAttribute('aria-invalid', 'true');
+            await expect(page.getByRole('combobox')).toHaveAttribute('aria-required', 'true');
             expect(await page.evaluate(() => window.submits)).toBe(0);
             await page.evaluate(() => $('#tags').tagsinput('setValue', 'Banana'));
             await expect(page.getByRole('combobox')).not.toHaveAttribute('aria-invalid');
@@ -316,13 +355,12 @@ test.describe('TagsInput forms', () => {
             await expect(page.locator('.tagsinput-selection')).toHaveText(['Banana']);
         });
 
-        test('rebinds reset handling when the external form owner changes', async ({ page }) => {
+        test('resets through an external form owner', async ({ page }) => {
             await page.evaluate(() => {
                 $.append(document.body, '<form id="second"><button type="reset">Second reset</button></form>');
                 const node = $.findOne('#tags');
-                const instance = UI.TagsInput.init(node);
                 $.setAttribute(node, 'form', 'second');
-                instance.setValue('Banana');
+                UI.TagsInput.init(node).setValue('Banana');
             });
             await page.getByRole('button', { name: 'Second reset' }).click();
             await expect(page.locator('#tags')).toHaveValues(['Apple']);

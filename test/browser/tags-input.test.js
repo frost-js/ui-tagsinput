@@ -215,7 +215,7 @@ test.describe('TagsInput', () => {
             await expect(page.locator('.tagsinput-menu, .tagsinput-container')).toHaveCount(0);
         });
 
-        for (const callback of ['renderSelection', 'renderResult', 'sanitize', 'validTag', 'isMatch', 'sortResults', 'getResults']) {
+        for (const callback of ['renderSelection', 'renderResult', 'sanitize', 'validTag', 'getResults']) {
             test(`allows disposal in ${callback}`, async ({ page }) => {
                 const instance = await page.evaluateHandle((callback) => {
                     const options = { minSearch: 0, debounce: 0 };

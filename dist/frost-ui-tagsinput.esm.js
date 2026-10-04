@@ -41,6 +41,12 @@ function normalizeValues(value, trim = false) {
 
 //#endregion
 //#region src/js/tags-input.js
+var ariaAttributes = [
+	"aria-describedby",
+	"aria-errormessage",
+	"aria-invalid",
+	"aria-required"
+];
 /** @typedef {string|number} TagsInputValue */
 /**
 * @typedef {object} TagsInputRequest
@@ -176,37 +182,35 @@ var TagsInput = class extends BaseComponent {
 	};
 	#activeItems = [];
 	#ariaHidden;
-	#changeHandler;
-	#container;
+	#changeHandler = null;
+	#container = null;
 	#data = [];
-	#documentHandler;
+	#documentHandler = null;
 	#focusedItem = null;
-	#focusHandler;
+	#focusHandler = null;
 	#form = null;
 	#generatedOptions = /* @__PURE__ */ new Set();
 	#hidden;
-	#invalid = false;
-	#invalidHandler;
 	#loading = false;
-	#loadResults;
+	#loadResults = null;
 	#maxSelections;
-	#menuNode;
+	#menuNode = null;
 	#notifying = false;
-	#observer;
+	#observer = null;
 	#offset = 0;
 	#open = false;
-	#placeholder;
+	#placeholder = null;
 	#placeholderText;
 	#popper = null;
 	#request = null;
 	#requestId = 0;
-	#resetHandler;
+	#resetHandler = null;
 	#resetTimer;
-	#scrollHandler;
-	#searchInput;
+	#scrollHandler = null;
+	#searchInput = null;
 	#showMore = false;
 	#tabIndex;
-	#toggle;
+	#toggle = null;
 	#transitionId = 0;
 	#value = [];
 	/**
@@ -221,6 +225,7 @@ var TagsInput = class extends BaseComponent {
 			this.#tabIndex = $.getAttribute(this.node, "tabindex");
 			this.#hidden = $.hasClass(this.node, this.constructor.classes.hide);
 			this.#ariaHidden = $.getAttribute(this.node, "aria-hidden");
+			this.#form = $.getProperty(this.node, "form");
 			this.#maxSelections = normalizeLimit(this.options.maxSelections);
 			this.#placeholderText = String(this.options.placeholder ?? "");
 			const data = this.options.data ?? [...$.getProperty(this.node, "options")].map((option) => $.getValue(option));
@@ -262,7 +267,6 @@ var TagsInput = class extends BaseComponent {
 		this.#popper?.dispose();
 		if (this.#focusHandler) $.removeEvent(this.node, "focus.ui.tagsinput", this.#focusHandler);
 		if (this.#changeHandler) $.removeEvent(this.node, "change.ui.tagsinput", this.#changeHandler);
-		if (this.#invalidHandler) $.removeEvent(this.node, "invalid.ui.tagsinput", this.#invalidHandler);
 		if (this.#documentHandler) $.removeEvent(this.node.ownerDocument, "click.ui.tagsinput", this.#documentHandler);
 		if (this.#form && this.#resetHandler) $.removeEvent(this.#form, "reset.ui.tagsinput", this.#resetHandler);
 		if (this.#hidden) $.addClass(this.node, this.constructor.classes.hide);
@@ -278,7 +282,6 @@ var TagsInput = class extends BaseComponent {
 		this.#changeHandler = null;
 		this.#documentHandler = null;
 		this.#focusHandler = null;
-		this.#invalidHandler = null;
 		this.#resetHandler = null;
 		this.#container = null;
 		this.#form = null;
@@ -409,36 +412,10 @@ var TagsInput = class extends BaseComponent {
 		else this.show();
 	}
 	/**
-	* Updates the menu position and editor width.
+	* Updates the menu position.
 	*/
 	update() {
-		this.#updateSearchWidth();
 		this.#popper?.update();
-	}
-	/**
-	* Binds reset handling to the select's current form, including external owners.
-	*/
-	#bindForm() {
-		if (this.#form === $.getProperty(this.node, "form")) return;
-		if (this.#form && this.#resetHandler) $.removeEvent(this.#form, "reset.ui.tagsinput", this.#resetHandler);
-		this.#form = $.getProperty(this.node, "form");
-		if (this.#form) $.addEvent(this.#form, "reset.ui.tagsinput", this.#resetHandler);
-	}
-	/**
-	* Applies the blur policies only when focus leaves the entire control.
-	*/
-	#blur() {
-		if (!this.node || containsNode(this.#container, this.node.ownerDocument.activeElement)) return;
-		if (!$.is(this.node, ":disabled") && $.getValue(this.#searchInput)) {
-			if (this.options.confirmOnBlur) this.#selectValue($.getValue(this.#searchInput), false);
-			else if (this.options.clearOnBlur) $.setValue(this.#searchInput, "");
-		}
-		if (!this.node) return;
-		this.hide();
-		if (!this.node) return;
-		this.#refreshFocus();
-		this.#refreshPlaceholder();
-		if (this.node) this.#updateSearchWidth();
 	}
 	/**
 	* Invalidates queued and in-flight requests before calling consumer cancellation.
@@ -484,32 +461,26 @@ var TagsInput = class extends BaseComponent {
 	*/
 	#events() {
 		this.#focusHandler = () => {
-			if (this.node && !$.is(this.node, ":disabled")) $.focus(this.#searchInput);
+			$.focus(this.#searchInput);
 		};
 		this.#changeHandler = () => {
 			if (!this.#notifying) this.#setValue(this.#readNativeValue());
 		};
-		this.#invalidHandler = (event) => {
-			event.preventDefault();
-			this.#invalid = true;
-			this.#refreshState();
-			this.#focusHandler();
-		};
-		this.#resetHandler = (event) => {
-			clearTimeout(this.#resetTimer);
-			this.#resetTimer = setTimeout(() => {
-				if (this.node && !event.defaultPrevented) {
-					this.#invalid = false;
-					$.setValue(this.#searchInput, "");
-					this.#setValue(this.#readNativeValue());
-					this.hide();
-				}
-			}, 0);
-		};
 		$.addEvent(this.node, "focus.ui.tagsinput", this.#focusHandler);
 		$.addEvent(this.node, "change.ui.tagsinput", this.#changeHandler);
-		$.addEvent(this.node, "invalid.ui.tagsinput", this.#invalidHandler);
-		this.#bindForm();
+		if (this.#form) {
+			this.#resetHandler = (event) => {
+				clearTimeout(this.#resetTimer);
+				this.#resetTimer = setTimeout(() => {
+					if (this.node && !event.defaultPrevented) {
+						$.setValue(this.#searchInput, "");
+						this.#setValue(this.#readNativeValue());
+						this.hide();
+					}
+				}, 0);
+			};
+			$.addEvent(this.#form, "reset.ui.tagsinput", this.#resetHandler);
+		}
 		this.#documentHandler = (event) => {
 			if (!this.node) return;
 			const label = $.is(event.target, "label") ? event.target : $.closest(event.target, "label")[0];
@@ -522,7 +493,19 @@ var TagsInput = class extends BaseComponent {
 			this.#refreshPlaceholder();
 		});
 		$.addEvent(this.#container, "focusout.ui.tagsinput", (event) => {
-			if (!containsNode(this.#container, event.relatedTarget)) queueMicrotask(() => this.#blur());
+			if (!containsNode(this.#container, event.relatedTarget)) queueMicrotask(() => {
+				if (!this.node || containsNode(this.#container, this.node.ownerDocument.activeElement)) return;
+				if (!$.is(this.node, ":disabled") && $.getValue(this.#searchInput)) {
+					if (this.options.confirmOnBlur) this.#selectValue($.getValue(this.#searchInput), false);
+					else if (this.options.clearOnBlur) $.setValue(this.#searchInput, "");
+				}
+				if (!this.node) return;
+				this.hide();
+				if (!this.node) return;
+				this.#refreshFocus();
+				this.#refreshPlaceholder();
+				if (this.node) this.#updateSearchWidth();
+			});
 		});
 		$.addEvent(this.#container, "click.ui.tagsinput", (event) => {
 			if (!this.node || event.defaultPrevented || $.is(this.node, ":disabled")) return;
@@ -541,12 +524,8 @@ var TagsInput = class extends BaseComponent {
 		});
 		$.addEvent(this.#menuNode, "mousedown.ui.tagsinput", (event) => event.preventDefault());
 		$.addEvent(this.#menuNode, "click.ui.tagsinput", (event) => event.stopPropagation());
-		$.addEventDelegate(this.#menuNode, "click.ui.tagsinput", "[data-ui-action=\"select\"]", (event) => {
-			this.#selectValue($.getAttribute(event.currentTarget, "data-ui-value"));
-		});
-		$.addEventDelegate(this.#menuNode, "mouseover.ui.tagsinput", "[data-ui-action=\"select\"]", (event) => {
-			this.#focusItem(event.currentTarget);
-		});
+		$.addEventDelegate(this.#menuNode, "click.ui.tagsinput", "[data-ui-action=\"select\"]", (event) => this.#selectValue($.getAttribute(event.currentTarget, "data-ui-value")));
+		$.addEventDelegate(this.#menuNode, "mouseover.ui.tagsinput", "[data-ui-action=\"select\"]", (event) => this.#focusItem(event.currentTarget));
 		$.addEvent(this.#searchInput, "input.ui.tagsinput", (event) => {
 			if ($.is(this.node, ":disabled") || event.isComposing) return;
 			this.#updateSearchWidth();
@@ -593,9 +572,9 @@ var TagsInput = class extends BaseComponent {
 			if ($.getScrollY(list) >= $.height(list, { boxSize: $.SCROLL_BOX }) - $.height(list) * 1.25) this.#load(this.#offset);
 		}, 250, { leading: false });
 		$.addEvent(this.#menuNode, "scroll.ui.tagsinput", this.#scrollHandler);
+		const nativeData = !this.options.data && !this.options.getResults;
 		this.#observer = new MutationObserver((records) => {
 			if (!this.node) return;
-			this.#bindForm();
 			if (this.#refreshData(records)) {
 				const focusedValue = $.getAttribute(this.#focusedItem, "data-ui-value");
 				this.#setValue(this.#readNativeValue());
@@ -608,21 +587,16 @@ var TagsInput = class extends BaseComponent {
 			attributeFilter: [
 				"disabled",
 				"required",
-				"form",
-				"class",
-				"dir",
 				"aria-label",
 				"aria-labelledby",
-				"aria-describedby",
-				"aria-errormessage",
-				"aria-invalid",
-				"selected",
+				...ariaAttributes,
 				"value",
-				"label"
+				"label",
+				"selected"
 			],
-			childList: true,
-			characterData: true,
-			subtree: true
+			childList: nativeData,
+			characterData: nativeData,
+			subtree: nativeData
 		});
 		for (const fieldset of $.parents(this.node, "fieldset")) this.#observer.observe(fieldset, {
 			attributes: true,
@@ -695,7 +669,6 @@ var TagsInput = class extends BaseComponent {
 	*/
 	#load(offset = 0) {
 		this.#cancelSearch();
-		if (!this.node) return;
 		if (!offset) {
 			this.#clearResults();
 			this.#offset = 0;
@@ -714,15 +687,12 @@ var TagsInput = class extends BaseComponent {
 		} else if (typeof this.options.getResults === "function") {
 			this.#loading = true;
 			this.#renderInfo(this.options.lang.loading);
-			if (this.node) this.#loadResults(term ? {
+			this.#loadResults(term ? {
 				offset,
 				term
 			} : { offset }, this.#requestId);
-		} else {
-			const results = this.#getLocalResults(term);
-			if (this.node) this.#renderResults(results);
-		}
-		if (this.node) this.update();
+		} else this.#renderResults(this.#getLocalResults(term));
+		this.update();
 	}
 	/**
 	* Reads current native values without changing native option identities.
@@ -738,7 +708,6 @@ var TagsInput = class extends BaseComponent {
 		this.#renderSelection();
 		if (!this.node) return;
 		this.#refreshPlaceholder();
-		if (!this.node) return;
 		this.#refreshState();
 		this.#updateSearchWidth();
 	}
@@ -748,12 +717,10 @@ var TagsInput = class extends BaseComponent {
 	* @returns {boolean} Whether native options changed.
 	*/
 	#refreshData(records) {
-		const changed = records.some((record) => record.type === "childList" || record.target !== this.node && !$.is(record.target, "fieldset"));
-		if (changed && this.options.data === null && !this.options.getResults) {
-			const values = [...$.getProperty(this.node, "options")].map((option) => $.getValue(option));
-			this.#data = normalizeValues(values);
-		}
-		return changed;
+		if (this.options.data || this.options.getResults || !records.some((record) => record.type !== "attributes" || $.is(record.target, "option, optgroup"))) return false;
+		const values = [...$.getProperty(this.node, "options")].map((option) => $.getValue(option));
+		this.#data = normalizeValues(values);
+		return true;
 	}
 	/**
 	* Keeps focus styling while the editor, a removal button, or the menu is active.
@@ -775,42 +742,32 @@ var TagsInput = class extends BaseComponent {
 	* Synchronizes editor attributes, styling, and disabled state.
 	*/
 	#refreshState() {
-		this.#bindForm();
-		const classes = this.constructor.classes;
 		const disabled = $.is(this.node, ":disabled");
-		$.setProperty(this.#toggle, { className: $.getProperty(this.node, "className") });
-		$.removeClass(this.#toggle, classes.hide);
-		$.addClass(this.#toggle, classes.tagToggle);
-		if (disabled) $.addClass(this.#toggle, classes.disabled);
-		else $.removeClass(this.#toggle, classes.disabled);
-		$.setProperty(this.#searchInput, {
-			disabled,
-			tabIndex: disabled ? -1 : Number(this.#tabIndex ?? 0)
-		});
+		if (disabled) $.addClass(this.#toggle, this.constructor.classes.disabled);
+		else $.removeClass(this.#toggle, this.constructor.classes.disabled);
+		$.setProperty(this.#searchInput, { disabled });
+		$.setProperty($.find("[data-ui-action=\"clear\"]", this.#container), { disabled });
+		$.setProperty(this.#searchInput, { tabIndex: disabled ? -1 : Number(this.#tabIndex ?? 0) });
 		$.setAttribute(this.#searchInput, {
 			"aria-disabled": disabled,
 			"aria-required": Boolean($.getProperty(this.node, "required"))
 		});
-		$.setProperty($.find("button", this.#toggle), { disabled });
-		const direction = $.css(this.node, "direction");
-		$.setProperty([this.#container, this.#menuNode], { dir: direction });
-		$.removeClass(this.#menuNode, [classes.menuSmall, classes.menuLarge]);
-		if ($.is(this.node, ".input-sm") || $.closest(this.node, ".input-group-sm").length) $.addClass(this.#menuNode, classes.menuSmall);
-		else if ($.is(this.node, ".input-lg") || $.closest(this.node, ".input-group-lg").length) $.addClass(this.#menuNode, classes.menuLarge);
-		for (const name of [
-			"aria-labelledby",
-			"aria-describedby",
-			"aria-errormessage",
-			"aria-invalid"
-		]) {
-			const value = $.getAttribute(this.node, name);
-			if (value === null) $.removeAttribute(this.#searchInput, name);
-			else $.setAttribute(this.#searchInput, { [name]: value });
+		for (const attribute of ariaAttributes) {
+			const value = $.getAttribute(this.node, attribute);
+			if (value === null) {
+				if (attribute !== "aria-required") $.removeAttribute(this.#searchInput, attribute);
+			} else $.setAttribute(this.#searchInput, { [attribute]: value });
 		}
+		const labelledBy = $.getAttribute(this.node, "aria-labelledby");
 		const label = $.getAttribute(this.node, "aria-label") || [...$.getProperty(this.node, "labels")].map((node) => $.getText(node).trim()).join(" ") || this.options.lang.search;
-		$.setAttribute(this.#searchInput, { "aria-label": label });
+		if (labelledBy) {
+			$.setAttribute(this.#searchInput, { "aria-labelledby": labelledBy });
+			$.removeAttribute(this.#searchInput, "aria-label");
+		} else {
+			$.removeAttribute(this.#searchInput, "aria-labelledby");
+			$.setAttribute(this.#searchInput, { "aria-label": label });
+		}
 		$.setAttribute(this.#menuNode, { "aria-label": label });
-		if (this.#invalid && !$.getProperty(this.node, "validity").valid) $.setAttribute(this.#searchInput, { "aria-invalid": "true" });
 		this.#refreshFocus();
 	}
 	/**
@@ -819,8 +776,11 @@ var TagsInput = class extends BaseComponent {
 	#render() {
 		const classes = this.constructor.classes;
 		const id = generateId("tagsinput");
-		this.#container = $.create("div", { class: classes.container });
-		this.#toggle = $.create("div", { class: classes.tagToggle });
+		this.#container = $.create("div", {
+			class: classes.container,
+			attributes: { dir: $.css(this.node, "direction") }
+		});
+		this.#toggle = $.create("div", { class: [$.getProperty(this.node, "className"), classes.tagToggle] });
 		this.#placeholder = $.create("span", {
 			class: classes.placeholder,
 			attributes: { "aria-hidden": true }
@@ -842,13 +802,16 @@ var TagsInput = class extends BaseComponent {
 			attributes: {
 				id,
 				"role": "listbox",
-				"aria-multiselectable": true
+				"aria-multiselectable": true,
+				"dir": $.css(this.node, "direction")
 			},
 			style: {
 				"maxHeight": this.options.maxHeight,
 				"--ui-tagsinput-duration": `${Math.max(0, Number(this.options.duration) || 0)}ms`
 			}
 		});
+		if ($.is(this.node, ".input-sm") || $.closest(this.node, ".input-group-sm").length) $.addClass(this.#menuNode, classes.menuSmall);
+		else if ($.is(this.node, ".input-lg") || $.closest(this.node, ".input-group-lg").length) $.addClass(this.#menuNode, classes.menuLarge);
 		$.append(this.#toggle, [this.#placeholder, this.#searchInput]);
 		$.append(this.#container, this.#toggle);
 		$.after(this.node, this.#container);
@@ -949,10 +912,10 @@ var TagsInput = class extends BaseComponent {
 		if (!this.#focusedItem) this.#focusItem(this.#activeItems[0] || null);
 	}
 	/**
-	* Builds tag chips in a fragment, leaving the editor and its focus intact.
+	* Rebuilds tag chips before the editor, leaving its focus intact.
 	*/
 	#renderSelection() {
-		const fragment = $._callDomMethod(this.node.ownerDocument, "createDocumentFragment");
+		$.remove($.children(this.#toggle, "[data-ui-tag]"));
 		const classes = this.constructor.classes;
 		for (const value of this.#value) {
 			const group = $.create("div", {
@@ -964,17 +927,14 @@ var TagsInput = class extends BaseComponent {
 			if (!this.node) return;
 			if (this.options.showClear) $.append(group, this.#renderClear(value));
 			$.append(group, label);
-			$.append(fragment, group);
+			$.before(this.#searchInput, group);
 		}
-		$.remove($.children(this.#toggle, "[data-ui-tag]"));
-		$.insertBefore(fragment, this.#searchInput);
 	}
 	/**
 	* Restores an option's focus and visibility after replacing result nodes.
 	* @param {string|null} value The option value key.
 	*/
 	#restoreFocus(value) {
-		if (!this.node || !this.#open) return;
 		const element = this.#activeItems.find((item) => $.getAttribute(item, "data-ui-value") === value);
 		if (element) {
 			this.#focusItem(element);

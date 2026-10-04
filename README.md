@@ -281,7 +281,7 @@ TagsInput.init(document.querySelector('#tags'), {
 });
 ```
 
-Synchronous validation, matching, and rendering callbacks are not coordinated with nested `setValue()` calls.
+Synchronous validation, matching, and rendering callbacks are not coordinated with nested `setValue()` calls. Matching and sorting callbacks should only return their result; use lifecycle listeners to dispose the component.
 
 Returned strings, placeholders, and status messages pass through `sanitize`. Returned elements and direct DOM changes bypass string sanitization; use `textContent` for untrusted text. Accessible result names and removal labels use the tag value. Keep essential identifying information in that value even when adding custom markup.
 
@@ -333,7 +333,7 @@ Data attributes configure options; they do not initialize TagsInput by themselve
 | `setValue(value)` | `void` | Silently select a scalar/array; `null` or `undefined` clears the selection. |
 | `show()` | `void` | Open suggestions unless disabled or canceled; respects the search minimum. |
 | `toggle()` | `void` | Toggle suggestions. |
-| `update()` | `void` | Refresh editor width and menu position. |
+| `update()` | `void` | Refresh the menu position. |
 
 Disposal restores the select's original hiding state, `tabindex`, and `aria-hidden`, while preserving option identities, labels, reset defaults, and current values. Reinitialize to create a new instance after disposal. Private fields and methods are not extension points.
 
@@ -395,7 +395,7 @@ Pass an options object to initialize every matched element, or pass a public met
 ## Accessibility
 
 - Label the native select with `<label for>`, `aria-label`, or `aria-labelledby`. The editable combobox inherits its accessible name; clicking an associated label focuses the editor.
-- Native `required`, disabled fieldsets, and `aria-describedby`, `aria-errormessage`, and `aria-invalid` are synchronized. Invalid native validation focuses the visible editor.
+- Native `required`, disabled fieldsets, and `aria-describedby`, `aria-errormessage`, `aria-invalid`, and `aria-required` are synchronized. Native validation remains on the select; set `aria-invalid` on it to expose validation errors on the editor.
 - The editor exposes its listbox relationship, expanded state, and active suggestion. Results expose selected state.
 - Arrow keys open/navigate suggestions. Enter chooses the active result or confirms free text; confirmation prevents accidental form submission. Escape closes; Tab follows normal focus order and the configured blur policy.
 - Backspace with an empty editor removes the last tag. Removal buttons are keyboard-operable and named `Remove selection: <value>` by default.
@@ -429,9 +429,9 @@ document.querySelector('#topics-form').addEventListener('submit', (event) => {
 
 The synchronized native select supplies submitted values; disabled fields are excluded. New tags create native options only when selected. Existing options keep their identity, labels, and defaults. `getValue()` follows selection order, while native `FormData` follows option order.
 
-Reset restores native defaults and asynchronously updates the chips, clears the search, and closes the menu. Generated options are removed when no longer selected unless explicitly marked `defaultSelected`. Canceled resets leave the current state intact; reset emits no component change event. External form association and changes to the select's `form` attribute are supported.
+Reset restores native defaults and asynchronously updates the chips, clears the search, and closes the menu. Generated options are removed when no longer selected unless explicitly marked `defaultSelected`. Canceled resets leave the current state intact; reset emits no component change event. External form association is supported. Reinitialize after changing the select's form owner.
 
-After changing native selections programmatically, dispatch a bubbling `change` event to synchronize the component. Native option additions/removals are observed; `update()` only refreshes sizing and positioning.
+After changing native selections programmatically, dispatch a bubbling `change` event to synchronize the component. Native option additions/removals are observed when suggestions come from the select. With `data` or `getResults`, dispatch `change` after changing native options or selections. `update()` only refreshes the menu position.
 
 ## Themes and RTL
 
@@ -448,7 +448,7 @@ Colors inherit Frost UI theme tokens. A menu appended outside a scoped theme nee
 }
 ```
 
-Set `dir="rtl"` on the document, an ancestor, or the select before initialization. Logical spacing and Popper start/end placement follow the copied direction. Changing `dir` on the select is observed; reinitialize after changing only an ancestor's direction.
+Set `dir="rtl"` on the document, an ancestor, or the select before initialization. Logical spacing and Popper start/end placement follow the copied direction. Classes, sizing, and direction are copied at initialization; reinitialize after changing them.
 
 ### Custom Sass builds
 
