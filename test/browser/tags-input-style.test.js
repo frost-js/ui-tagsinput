@@ -67,6 +67,10 @@ test.describe('TagsInput styles', () => {
                 await expect(control).toHaveCSS('direction', direction);
                 expect(await control.evaluate((node) => node.scrollWidth <= node.clientWidth)).toBe(true);
                 await expect(control).toHaveCSS('column-gap', '4px');
+                const [first, second] = await Promise.all(
+                    (await control.locator('[data-ui-tag]').all()).map((chip) => chip.boundingBox()),
+                );
+                expect(second.y - first.y - first.height).toBeGreaterThanOrEqual(4);
                 const bounds = await control.boundingBox();
                 for (const button of await control.getByRole('button').all()) {
                     const clear = await button.boundingBox();
@@ -94,6 +98,46 @@ test.describe('TagsInput styles', () => {
     });
 
     test.describe('menu sizing and overflow', () => {
+        test('gives short results a customizable minimum width', async ({ page }) => {
+            await page.evaluate(() => {
+                $.setHtml('#tags', '<option value="a">A</option>');
+                UI.TagsInput.init($.findOne('#tags'), { minSearch: 0 }).show();
+            });
+            const menu = page.getByRole('listbox');
+            await expect(menu).toHaveCSS('width', '160px');
+            await page.evaluate(() => $.setStyle('.tagsinput-menu', '--ui-tagsinput-min-width', '200px'));
+            await expect(menu).toHaveCSS('width', '200px');
+        });
+
+        test('constrains the minimum width to the available space', async ({ page }) => {
+            await page.evaluate(() => {
+                $.setStyle('#host', { width: '100px', position: 'relative' });
+                UI.TagsInput.init($.findOne('#tags'), { minSearch: 0 }).show();
+            });
+            await expect(page.getByRole('listbox')).toHaveCSS('width', '100px');
+            await expect(page.getByRole('listbox')).toBeVisible();
+        });
+
+        for (const appended of [false, true]) {
+            test(`matches narrow controls and resizing with fullWidth (appended=${appended})`, async ({ page }) => {
+                await page.evaluate((appended) => {
+                    $.setStyle('#host', 'width', '100px');
+                    UI.TagsInput.init($.findOne('#tags'), {
+                        fullWidth: true, appendTo: appended ? document.body : null, minSearch: 0,
+                    }).show();
+                }, appended);
+                const menu = page.getByRole('listbox');
+                await expect(menu).toHaveCSS('width', '100px');
+                await page.evaluate(() => {
+                    $.setStyle('.tagsinput-menu', '--ui-tagsinput-min-width', '400px');
+                    $.setStyle('#host', 'width', '220px');
+                    $('#tags').tagsinput('update');
+                });
+                await expect(menu).toHaveCSS('width', '220px');
+                await expect(page.locator('.tagsinput')).toHaveCSS('width', '220px');
+            });
+        }
+
         test('wraps long results and constrains the scrollable menu', async ({ page }) => {
             await page.evaluate(() => UI.TagsInput.init($.findOne('#tags'), {
                 fullWidth: true, maxHeight: '70px', minSearch: 0,

@@ -3,8 +3,16 @@
   isolation: isolate;
 }
 
+.tagsinput-selection {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .tagsinput {
   gap: 0.25rem;
+  row-gap: calc(0.25rem + 0.5rem);
   align-items: center;
 }
 .tagsinput:not(.disabled) {
@@ -28,10 +36,6 @@
 }
 .tagsinput .tagsinput-selection {
   display: block;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
   cursor: inherit;
 }
 .tagsinput .btn-close {
@@ -62,6 +66,7 @@
 
 .tagsinput-menu {
   --ui-tagsinput-z-index: 1000;
+  --ui-tagsinput-min-width: 10rem;
   --ui-tagsinput-color: var(--ui-body-color);
   --ui-tagsinput-bg: var(--ui-body-bg);
   --ui-tagsinput-border-width: var(--ui-border-width);
@@ -76,6 +81,7 @@
   position: absolute;
   z-index: var(--ui-tagsinput-z-index);
   width: max-content;
+  min-width: min(var(--ui-tagsinput-min-width), 100%);
   max-width: 100%;
   padding: 0;
   margin: 0;

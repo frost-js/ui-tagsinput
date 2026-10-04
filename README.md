@@ -441,6 +441,8 @@ Load UI CSS before TagsInput CSS. Use `input-filled` or `input-outline` and opti
 
 Colors inherit Frost UI theme tokens. A menu appended outside a scoped theme needs that theme on its destination too.
 
+Menus have a `10rem` minimum width, constrained to the available space. Customize it with `--ui-tagsinput-min-width` or the `$tagsinput-min-width` Sass variable. With `fullWidth`, the menu follows the control's width.
+
 ```css
 .tagsinput-menu {
     --ui-tagsinput-item-padding-y: .5rem;

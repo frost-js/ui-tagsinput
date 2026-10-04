@@ -512,7 +512,12 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 				minContact: this.options.minContact
 			};
 			if (this.options.fullWidth) options.beforeUpdate = (node, reference) => {
-				_fr0st_query.default.setStyle(node, "width", `${_fr0st_query.default.width(reference, { boxSize: _fr0st_query.default.BORDER_BOX })}px`);
+				const width = `${_fr0st_query.default.width(reference, { boxSize: _fr0st_query.default.BORDER_BOX })}px`;
+				_fr0st_query.default.setStyle(node, {
+					width,
+					minWidth: width,
+					maxWidth: width
+				});
 			};
 			this.#popper = new _fr0st_ui.Popper(this.#menuNode, options);
 		}

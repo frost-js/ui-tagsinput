@@ -565,7 +565,9 @@ export default class TagsInput extends BaseComponent {
 
         if (this.options.fullWidth) {
             options.beforeUpdate = (node, reference) => {
-                $.setStyle(node, 'width', `${$.width(reference, { boxSize: $.BORDER_BOX })}px`);
+                const width = `${$.width(reference, { boxSize: $.BORDER_BOX })}px`;
+
+                $.setStyle(node, { width, minWidth: width, maxWidth: width });
             };
         }
 
