@@ -546,35 +546,35 @@ test.describe('TagsInput', () => {
             await control.press('Enter');
             await expect(page.locator('#tags')).toHaveValues(['Apple', 'New']);
         });
-    });
 
-    test('waits for non-composing input before searching', async ({ page }) => {
-        await page.evaluate(() => {
-            window.matches = 0;
-            UI.TagsInput.init($.findOne('#tags'), {
-                isMatch(value, term) {
-                    window.matches++;
+        test('waits for non-composing input before searching', async ({ page }) => {
+            await page.evaluate(() => {
+                window.matches = 0;
+                UI.TagsInput.init($.findOne('#tags'), {
+                    isMatch(value, term) {
+                        window.matches++;
 
-                    return value.includes(term);
-                },
+                        return value.includes(term);
+                    },
+                });
+                $.setValue('.tagsinput-input', 'Ban');
             });
-            $.setValue('.tagsinput-input', 'Ban');
+
+            const control = page.getByRole('combobox');
+            await control.evaluate((node) => node.dispatchEvent(new InputEvent('input', {
+                bubbles: true,
+                isComposing: true,
+            })));
+            await expect(control).toHaveAttribute('aria-expanded', 'false');
+            expect(await page.evaluate(() => window.matches)).toBe(0);
+
+            await control.evaluate((node) => node.dispatchEvent(new InputEvent('input', {
+                bubbles: true,
+                isComposing: false,
+            })));
+            await expect(page.getByRole('option')).toHaveText(['Banana']);
+            expect(await page.evaluate(() => window.matches)).toBe(3);
         });
-
-        const control = page.getByRole('combobox');
-        await control.evaluate((node) => node.dispatchEvent(new InputEvent('input', {
-            bubbles: true,
-            isComposing: true,
-        })));
-        await expect(control).toHaveAttribute('aria-expanded', 'false');
-        expect(await page.evaluate(() => window.matches)).toBe(0);
-
-        await control.evaluate((node) => node.dispatchEvent(new InputEvent('input', {
-            bubbles: true,
-            isComposing: false,
-        })));
-        await expect(page.getByRole('option')).toHaveText(['Banana']);
-        expect(await page.evaluate(() => window.matches)).toBe(3);
     });
 
     test.describe('data option', () => {
@@ -693,21 +693,31 @@ test.describe('TagsInput', () => {
         });
     });
 
-    for (const option of ['confirmOnBlur', 'clearOnBlur']) {
-        test.describe(`${option} option`, () => {
-            for (const enabled of [true, false]) {
-                test(`applies the blur policy (${enabled})`, async ({ page }) => {
-                    await page.evaluate(({ option, enabled }) => UI.TagsInput.init($.findOne('#tags'), {
-                        confirmOnBlur: false, clearOnBlur: false, [option]: enabled,
-                    }), { option, enabled });
-                    await page.getByRole('combobox').fill('New');
-                    await page.locator('#outside').click();
-                    await expect(page.locator('#tags')).toHaveValues(option === 'confirmOnBlur' && enabled ? ['Apple', 'New'] : ['Apple']);
-                    await expect(page.getByRole('combobox')).toHaveValue(enabled ? '' : 'New');
-                });
-            }
+    test.describe('focus and blur', () => {
+        test('keeps unconfirmed text when focus moves to a removal button', async ({ page }) => {
+            await page.evaluate(() => UI.TagsInput.init($.findOne('#tags')).setValue(['Apple', 'Banana']));
+            await page.getByRole('combobox').fill('New');
+            await page.getByRole('combobox').press('Shift+Tab');
+            await expect(page.getByRole('button', { name: 'Remove selection: Banana' })).toBeFocused();
+            await expect(page.locator('#tags')).toHaveValues(['Apple', 'Banana']);
         });
-    }
+
+        for (const option of ['confirmOnBlur', 'clearOnBlur']) {
+            test.describe(`${option} option`, () => {
+                for (const enabled of [true, false]) {
+                    test(`applies the blur policy (${enabled})`, async ({ page }) => {
+                        await page.evaluate(({ option, enabled }) => UI.TagsInput.init($.findOne('#tags'), {
+                            confirmOnBlur: false, clearOnBlur: false, [option]: enabled,
+                        }), { option, enabled });
+                        await page.getByRole('combobox').fill('New');
+                        await page.locator('#outside').click();
+                        await expect(page.locator('#tags')).toHaveValues(option === 'confirmOnBlur' && enabled ? ['Apple', 'New'] : ['Apple']);
+                        await expect(page.getByRole('combobox')).toHaveValue(enabled ? '' : 'New');
+                    });
+                }
+            });
+        }
+    });
 
     test.describe('showClear option', () => {
         for (const showClear of [true, false]) {

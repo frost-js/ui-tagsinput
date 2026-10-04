@@ -144,69 +144,71 @@ test.describe('TagsInput forms', () => {
             expect(await page.evaluate(() => window.changes)).toBe(0);
         });
 
-        test('prefers aria-labelledby and restores the fallback accessible label', async ({ page }) => {
-            await page.evaluate(() => {
-                $.append(document.body, '<span id="name">Choose fruit</span>');
-                const node = $.findOne('#tags');
-                $.setAttribute(node, { 'aria-label': 'Favorite fruit', 'aria-labelledby': 'name' });
-                UI.TagsInput.init(node);
-            });
-            const control = page.getByRole('combobox');
-            await expect(control).toHaveAccessibleName('Choose fruit');
-            await expect(control).toHaveAttribute('aria-labelledby', 'name');
-            await expect(control).not.toHaveAttribute('aria-label');
-
-            await page.evaluate(() => $.removeAttribute('#tags', 'aria-labelledby'));
-            await expect(control).toHaveAccessibleName('Favorite fruit');
-            await expect(control).not.toHaveAttribute('aria-labelledby');
-            await expect(control).toHaveAttribute('aria-label', 'Favorite fruit');
-
-            await page.evaluate(() => $.removeAttribute('#tags', 'aria-label'));
-            await expect(control).toHaveAccessibleName('Fruit');
-        });
-
-        test('synchronizes aria-required overrides and falls back to native required', async ({ page }) => {
-            await page.evaluate(() => {
-                $.setProperty('#tags', 'required', true);
-                UI.TagsInput.init($.findOne('#tags'));
-            });
-            const control = page.getByRole('combobox');
-            await expect(control).toHaveAttribute('aria-required', 'true');
-
-            await page.evaluate(() => $.setAttribute('#tags', 'aria-required', 'false'));
-            await expect(control).toHaveAttribute('aria-required', 'false');
-
-            await page.evaluate(() => $.removeAttribute('#tags', 'aria-required'));
-            await expect(control).toHaveAttribute('aria-required', 'true');
-
-            await page.evaluate(() => $.setProperty('#tags', 'required', false));
-            await expect(control).toHaveAttribute('aria-required', 'false');
-        });
-
-        test('updates accessible labels, descriptions, and error references', async ({ page }) => {
-            await page.evaluate(() => {
-                const node = $.findOne('#tags');
-                UI.TagsInput.init(node);
-                $.setAttribute(node, {
-                    'aria-label': 'Favorite fruit',
-                    'aria-describedby': 'help',
-                    'aria-errormessage': 'error',
-                    'aria-invalid': 'true',
+        test.describe('ARIA attributes', () => {
+            test('prefers aria-labelledby and restores the fallback accessible label', async ({ page }) => {
+                await page.evaluate(() => {
+                    $.append(document.body, '<span id="name">Choose fruit</span>');
+                    const node = $.findOne('#tags');
+                    $.setAttribute(node, { 'aria-label': 'Favorite fruit', 'aria-labelledby': 'name' });
+                    UI.TagsInput.init(node);
                 });
+                const control = page.getByRole('combobox');
+                await expect(control).toHaveAccessibleName('Choose fruit');
+                await expect(control).toHaveAttribute('aria-labelledby', 'name');
+                await expect(control).not.toHaveAttribute('aria-label');
+
+                await page.evaluate(() => $.removeAttribute('#tags', 'aria-labelledby'));
+                await expect(control).toHaveAccessibleName('Favorite fruit');
+                await expect(control).not.toHaveAttribute('aria-labelledby');
+                await expect(control).toHaveAttribute('aria-label', 'Favorite fruit');
+
+                await page.evaluate(() => $.removeAttribute('#tags', 'aria-label'));
+                await expect(control).toHaveAccessibleName('Fruit');
             });
-            const control = page.getByRole('combobox', { name: 'Favorite fruit' });
-            await expect(control).toHaveAttribute('aria-describedby', 'help');
-            await expect(control).toHaveAttribute('aria-errormessage', 'error');
-            await expect(control).toHaveAttribute('aria-invalid', 'true');
-            await page.evaluate(() => {
-                const node = $.findOne('#tags');
-                for (const attribute of ['aria-describedby', 'aria-errormessage', 'aria-invalid']) {
-                    $.removeAttribute(node, attribute);
-                }
+
+            test('synchronizes aria-required overrides and falls back to native required', async ({ page }) => {
+                await page.evaluate(() => {
+                    $.setProperty('#tags', 'required', true);
+                    UI.TagsInput.init($.findOne('#tags'));
+                });
+                const control = page.getByRole('combobox');
+                await expect(control).toHaveAttribute('aria-required', 'true');
+
+                await page.evaluate(() => $.setAttribute('#tags', 'aria-required', 'false'));
+                await expect(control).toHaveAttribute('aria-required', 'false');
+
+                await page.evaluate(() => $.removeAttribute('#tags', 'aria-required'));
+                await expect(control).toHaveAttribute('aria-required', 'true');
+
+                await page.evaluate(() => $.setProperty('#tags', 'required', false));
+                await expect(control).toHaveAttribute('aria-required', 'false');
             });
-            await expect(control).not.toHaveAttribute('aria-describedby');
-            await expect(control).not.toHaveAttribute('aria-errormessage');
-            await expect(control).not.toHaveAttribute('aria-invalid');
+
+            test('updates accessible labels, descriptions, and error references', async ({ page }) => {
+                await page.evaluate(() => {
+                    const node = $.findOne('#tags');
+                    UI.TagsInput.init(node);
+                    $.setAttribute(node, {
+                        'aria-label': 'Favorite fruit',
+                        'aria-describedby': 'help',
+                        'aria-errormessage': 'error',
+                        'aria-invalid': 'true',
+                    });
+                });
+                const control = page.getByRole('combobox', { name: 'Favorite fruit' });
+                await expect(control).toHaveAttribute('aria-describedby', 'help');
+                await expect(control).toHaveAttribute('aria-errormessage', 'error');
+                await expect(control).toHaveAttribute('aria-invalid', 'true');
+                await page.evaluate(() => {
+                    const node = $.findOne('#tags');
+                    for (const attribute of ['aria-describedby', 'aria-errormessage', 'aria-invalid']) {
+                        $.removeAttribute(node, attribute);
+                    }
+                });
+                await expect(control).not.toHaveAttribute('aria-describedby');
+                await expect(control).not.toHaveAttribute('aria-errormessage');
+                await expect(control).not.toHaveAttribute('aria-invalid');
+            });
         });
     });
 
@@ -373,16 +375,6 @@ test.describe('TagsInput forms', () => {
             await page.evaluate(() => $.findOne('#form').reset());
             await expect(page.getByRole('combobox')).toHaveValue('');
             await expect(page.getByRole('combobox')).toHaveAttribute('aria-expanded', 'false');
-        });
-    });
-
-    test.describe('keyboard navigation', () => {
-        test('keeps unconfirmed text when focus moves to a removal button', async ({ page }) => {
-            await page.evaluate(() => UI.TagsInput.init($.findOne('#tags')).setValue(['Apple', 'Banana']));
-            await page.getByRole('combobox').fill('New');
-            await page.getByRole('combobox').press('Shift+Tab');
-            await expect(page.getByRole('button', { name: 'Remove selection: Banana' })).toBeFocused();
-            await expect(page.locator('#tags')).toHaveValues(['Apple', 'Banana']);
         });
     });
 
