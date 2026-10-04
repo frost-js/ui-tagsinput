@@ -471,13 +471,12 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 				if (this.options.confirmOnBlur) this.#selectValue(_fr0st_query.default.getValue(this.#searchInput), false);
 				else if (this.options.clearOnBlur) _fr0st_query.default.setValue(this.#searchInput, "");
 			}
-			if (this.node) {
-				this.hide();
-				if (!this.node) return;
-				this.#refreshFocus();
-				this.#refreshPlaceholder();
-				if (this.node) this.#updateSearchWidth();
-			}
+			if (!this.node) return;
+			this.hide();
+			if (!this.node) return;
+			this.#refreshFocus();
+			this.#refreshPlaceholder();
+			if (this.node) this.#updateSearchWidth();
 		}
 		/**
 		* Invalidates queued and in-flight requests before calling consumer cancellation.
@@ -623,7 +622,38 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 				this.#input();
 			});
 			_fr0st_query.default.addEvent(this.#searchInput, "input.ui.tagsinput", () => this.#input());
-			_fr0st_query.default.addEvent(this.#searchInput, "keydown.ui.tagsinput", (event) => this.#keydown(event));
+			_fr0st_query.default.addEvent(this.#searchInput, "keydown.ui.tagsinput", (event) => {
+				if (!this.node || _fr0st_query.default.is(this.node, ":disabled") || event.isComposing || this.#composing || event.ctrlKey || event.altKey || event.metaKey) return;
+				const key = event.key;
+				const active = this.#open ? this.#focusedItem : null;
+				if (key === "Enter" || this.options.confirmKeys.includes(key)) {
+					const value = key === "Enter" && active ? _fr0st_query.default.getAttribute(active, "data-ui-value") : _fr0st_query.default.getValue(this.#searchInput);
+					if (value || this.options.confirmKeys.includes(key)) {
+						event.preventDefault();
+						this.#selectValue(value);
+					}
+				} else if (key === "Backspace" && !_fr0st_query.default.getValue(this.#searchInput) && this.#value.length) {
+					event.preventDefault();
+					this.#setValue(this.#value.slice(0, -1), true);
+				} else if (key === "Escape" && this.#open) {
+					event.preventDefault();
+					event.stopPropagation();
+					this.hide();
+				} else if (key === "ArrowDown" || key === "ArrowUp") {
+					event.preventDefault();
+					if (!this.#open) {
+						this.show();
+						return;
+					}
+					const index = this.#activeItems.indexOf(active);
+					const next = index < 0 ? 0 : index + (key === "ArrowDown" ? 1 : -1);
+					const option = this.#activeItems[next];
+					if (option) {
+						this.#focusItem(option);
+						_fr0st_query.default._callDomMethod(option, "scrollIntoView", { block: "nearest" });
+					}
+				}
+			});
 			this.#scrollHandler = _fr0st_query.default._throttle(() => {
 				if (this.node && this.#open && !this.#loading && this.#showMore) {
 					const menu = this.#menuNode;
@@ -673,16 +703,16 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 		* @returns {Promise<void>} Resolves when the request settles.
 		*/
 		async #fetchResults(request, id) {
-			if (!this.node || id !== this.#requestId) return;
+			if (id !== this.#requestId) return;
 			try {
 				const result = this.options.getResults.call(this, request);
-				if (!this.node || id !== this.#requestId) {
+				if (id !== this.#requestId) {
 					result?.cancel?.();
 					return;
 				}
 				this.#request = result;
 				const response = await result;
-				if (!this.node || id !== this.#requestId) return;
+				if (id !== this.#requestId) return;
 				if (!Array.isArray(response?.results)) throw new TypeError("TagsInput results must be an array");
 				if (!request.offset) this.#clearResults();
 				else _fr0st_query.default.remove(_fr0st_query.default.children(this.#menuNode, "[role=\"status\"]"));
@@ -690,13 +720,13 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 				this.#showMore = Boolean(response.showMore) && response.results.length > 0;
 				this.#renderResults(normalizeValues(response.results), id);
 			} catch {
-				if (this.node && id === this.#requestId) {
+				if (id === this.#requestId) {
 					this.#showMore = false;
 					_fr0st_query.default.remove(_fr0st_query.default.children(this.#menuNode, "[role=\"status\"]"));
 					this.#renderInfo(this.options.lang.error);
 				}
 			} finally {
-				if (this.node && id === this.#requestId) {
+				if (id === this.#requestId) {
 					this.#request = null;
 					this.#loading = false;
 					this.update();
@@ -718,6 +748,24 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			} else _fr0st_query.default.removeAttribute(this.#searchInput, "aria-activedescendant");
 		}
 		/**
+		* Filters and sorts local suggestions, stopping an interrupted search.
+		* @param {string} term The search term.
+		* @param {number} id The request generation.
+		* @returns {string[]} The matching results.
+		*/
+		#getLocalResults(term, id) {
+			const data = this.#data.slice();
+			if (!term) return data;
+			const options = this.options;
+			const results = [];
+			for (const value of data) {
+				const match = options.isMatch.call(this, value, term);
+				if (id !== this.#requestId) return [];
+				if (match) results.push(value);
+			}
+			return results.sort((a, b) => id === this.#requestId ? options.sortResults.call(this, a, b, term) : 0);
+		}
+		/**
 		* Refreshes search sizing and suggestions after input, excluding IME composition.
 		*/
 		#input() {
@@ -730,42 +778,6 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			}
 			if (this.#open) this.#load();
 			else this.show();
-		}
-		/**
-		* Handles confirmation, removal, and suggestion navigation.
-		* @param {KeyboardEvent} event The keyboard event.
-		*/
-		#keydown(event) {
-			if (!this.node || _fr0st_query.default.is(this.node, ":disabled") || event.isComposing || this.#composing || event.ctrlKey || event.altKey || event.metaKey) return;
-			const key = event.key;
-			const active = this.#open ? this.#focusedItem : null;
-			if (key === "Enter" || this.options.confirmKeys.includes(key)) {
-				const value = key === "Enter" && active ? _fr0st_query.default.getAttribute(active, "data-ui-value") : _fr0st_query.default.getValue(this.#searchInput);
-				if (value || this.options.confirmKeys.includes(key)) {
-					event.preventDefault();
-					this.#selectValue(value);
-				}
-			} else if (key === "Backspace" && !_fr0st_query.default.getValue(this.#searchInput) && this.#value.length) {
-				event.preventDefault();
-				this.#setValue(this.#value.slice(0, -1), true);
-			} else if (key === "Escape" && this.#open) {
-				event.preventDefault();
-				event.stopPropagation();
-				this.hide();
-			} else if (key === "ArrowDown" || key === "ArrowUp") {
-				event.preventDefault();
-				if (!this.#open) {
-					this.show();
-					return;
-				}
-				const index = this.#activeItems.indexOf(active);
-				const next = index < 0 ? 0 : index + (key === "ArrowDown" ? 1 : -1);
-				const option = this.#activeItems[next];
-				if (option) {
-					this.#focusItem(option);
-					_fr0st_query.default._callDomMethod(option, "scrollIntoView", { block: "nearest" });
-				}
-			}
 		}
 		/**
 		* Loads suggestions for the current editor value.
@@ -793,18 +805,13 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			} else if (typeof this.options.getResults === "function") {
 				this.#loading = true;
 				this.#renderInfo(this.options.lang.loading);
-				if (this.node && id === this.#requestId) this.#loadResults(term ? {
+				if (id === this.#requestId) this.#loadResults(term ? {
 					offset,
 					term
 				} : { offset }, id);
 			} else {
-				const options = this.options;
-				let results = this.#data.slice();
-				if (term) {
-					results = results.filter((value) => this.node && id === this.#requestId && options.isMatch.call(this, value, term));
-					results.sort((a, b) => this.node && id === this.#requestId ? options.sortResults.call(this, a, b, term) : 0);
-				}
-				if (this.node && id === this.#requestId) this.#renderResults(results, id);
+				const results = this.#getLocalResults(term, id);
+				if (id === this.#requestId) this.#renderResults(results, id);
 			}
 			this.update();
 		}
@@ -814,6 +821,20 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 		*/
 		#readNativeValue() {
 			return [..._fr0st_query.default.getProperty(this.node, "selectedOptions")].map((option) => _fr0st_query.default.getValue(option));
+		}
+		/**
+		* Refreshes the selection, control state, placeholder, and editor width.
+		* Consumer callbacks can dispose the component or replace its value.
+		* @param {number} id The value generation.
+		*/
+		#refresh(id) {
+			this.#renderSelection(id);
+			if (id !== this.#valueId) return;
+			this.#refreshState();
+			if (id !== this.#valueId) return;
+			this.#refreshPlaceholder();
+			if (id !== this.#valueId) return;
+			this.#updateSearchWidth();
 		}
 		/**
 		* Refreshes native suggestions when mutation records include option changes.
@@ -832,10 +853,8 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 		* Keeps focus styling while the editor, a removal button, or the menu is active.
 		*/
 		#refreshFocus() {
-			if (this.node) {
-				if (!_fr0st_query.default.is(this.node, ":disabled") && (this.#open || containsNode(this.#container, this.node.ownerDocument.activeElement))) _fr0st_query.default.addClass(this.#toggle, this.constructor.classes.focus);
-				else _fr0st_query.default.removeClass(this.#toggle, this.constructor.classes.focus);
-			}
+			if (!_fr0st_query.default.is(this.node, ":disabled") && (this.#open || containsNode(this.#container, this.node.ownerDocument.activeElement))) _fr0st_query.default.addClass(this.#toggle, this.constructor.classes.focus);
+			else _fr0st_query.default.removeClass(this.#toggle, this.constructor.classes.focus);
 		}
 		/**
 		* Updates the placeholder without moving the focused input.
@@ -1088,17 +1107,39 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			this.#refreshData(this.#observer?.takeRecords() ?? []);
 			const id = ++this.#valueId;
 			const options = this.options;
-			let values = normalizeValues(value, options.trimValue).filter((entry) => this.node && id === this.#valueId && options.validTag.call(this, entry));
-			if (!this.node || id !== this.#valueId) return;
-			if (this.#maxSelections) values = values.slice(0, this.#maxSelections);
+			const values = [];
+			for (const entry of normalizeValues(value, options.trimValue)) {
+				const valid = options.validTag.call(this, entry);
+				if (id !== this.#valueId) return;
+				if (valid) values.push(entry);
+			}
+			if (this.#maxSelections) values.splice(this.#maxSelections);
 			const changed = values.length !== this.#value.length || values.some((entry, index) => entry !== this.#value[index]);
 			this.#value = values;
+			this.#syncOptions();
+			this.#refresh(id);
+			if (id !== this.#valueId) return;
+			if (this.#open) this.#load();
+			if (id === this.#valueId && notify && changed) {
+				this.#notifying = true;
+				try {
+					_fr0st_query.default.triggerEvent(this.node, "change.ui.tagsinput");
+				} finally {
+					this.#notifying = false;
+				}
+			}
+		}
+		/**
+		* Synchronizes native selection and removes unused generated options.
+		* Authored options and default selections retain their identities.
+		*/
+		#syncOptions() {
 			const lookup = /* @__PURE__ */ new Map();
 			for (const option of _fr0st_query.default.getProperty(this.node, "options")) {
 				_fr0st_query.default.setProperty(option, { selected: false });
 				if (!lookup.has(_fr0st_query.default.getValue(option))) lookup.set(_fr0st_query.default.getValue(option), option);
 			}
-			for (const entry of values) {
+			for (const entry of this.#value) {
 				let option = lookup.get(entry);
 				if (!option) {
 					option = _fr0st_query.default.create("option", {
@@ -1115,22 +1156,6 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 				this.#generatedOptions.delete(option);
 			}
 			this.#observer?.takeRecords();
-			this.#renderSelection(id);
-			if (!this.node || id !== this.#valueId) return;
-			this.#refreshState();
-			if (!this.node) return;
-			this.#refreshPlaceholder();
-			if (!this.node) return;
-			this.#updateSearchWidth();
-			if (this.#open) this.#load();
-			if (this.node && id === this.#valueId && notify && changed) {
-				this.#notifying = true;
-				try {
-					_fr0st_query.default.triggerEvent(this.node, "change.ui.tagsinput");
-				} finally {
-					this.#notifying = false;
-				}
-			}
 		}
 		/**
 		* Sizes the editor using its complete font metrics; CSS bounds the result.

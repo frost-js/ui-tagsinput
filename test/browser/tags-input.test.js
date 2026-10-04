@@ -266,6 +266,34 @@ test.describe('TagsInput', () => {
     });
 
     test.describe('#setValue', () => {
+        for (const callback of ['validTag', 'renderSelection', 'sanitize']) {
+            test(`keeps a value set inside ${callback}`, async ({ page }) => {
+                const value = await page.evaluate((callback) => {
+                    let replace = false;
+                    const options = {
+                        [callback](value) {
+                            if (replace) {
+                                replace = false;
+                                this.setValue(['Cherry']);
+                            }
+
+                            return callback === 'validTag' ? true : value;
+                        },
+                    };
+                    const instance = UI.TagsInput.init($.findOne('#tags'), options);
+                    replace = true;
+                    instance.setValue(['Banana', 'Outer']);
+
+                    return instance.getValue();
+                }, callback);
+
+                expect(value).toEqual(['Cherry']);
+                await expect(page.locator('#tags')).toHaveValues(['Cherry']);
+                await expect(page.locator('.tagsinput-selection')).toHaveText(['Cherry']);
+                await expect(page.locator('#tags option[value="Outer"]')).toHaveCount(0);
+            });
+        }
+
         for (const { name, value, expected } of [
             { name: 'null', value: null, expected: [] },
             { name: 'undefined', value: undefined, expected: [] },
@@ -604,6 +632,27 @@ test.describe('TagsInput', () => {
             await page.getByRole('combobox').fill('anything');
             await expect(page.getByRole('option')).toHaveText(['Cherry', 'Apple']);
         });
+
+        for (const callback of ['isMatch', 'sortResults']) {
+            test(`stops calling ${callback} after disposal`, async ({ page }) => {
+                await page.evaluate((callback) => {
+                    window.calls = 0;
+                    const options = { isMatch: () => true };
+                    options[callback] = function() {
+                        window.calls++;
+                        this.dispose();
+
+                        return callback === 'isMatch' ? true : 0;
+                    };
+
+                    UI.TagsInput.init($.findOne('#tags'), options);
+                }, callback);
+
+                await page.getByRole('combobox').fill('anything');
+                await expect(page.locator('.tagsinput-container, .tagsinput-menu')).toHaveCount(0);
+                expect(await page.evaluate(() => window.calls)).toBe(1);
+            });
+        }
     });
 
     test.describe('minSearch option', () => {

@@ -250,6 +250,7 @@ export default class TagsInput extends BaseComponent {
         }
 
         const node = this.node;
+        // Invalidate transitions and value work before consumer callbacks can reenter.
         this.#transitionId++;
         this.#valueId++;
         this.#observer?.disconnect();
@@ -516,19 +517,21 @@ export default class TagsInput extends BaseComponent {
             }
         }
 
+        if (!this.node) {
+            return;
+        }
+
+        this.hide();
+
+        if (!this.node) {
+            return;
+        }
+
+        this.#refreshFocus();
+        this.#refreshPlaceholder();
+
         if (this.node) {
-            this.hide();
-
-            if (!this.node) {
-                return;
-            }
-
-            this.#refreshFocus();
-            this.#refreshPlaceholder();
-
-            if (this.node) {
-                this.#updateSearchWidth();
-            }
+            this.#updateSearchWidth();
         }
     }
 
@@ -763,7 +766,58 @@ export default class TagsInput extends BaseComponent {
         });
 
         $.addEvent(this.#searchInput, 'input.ui.tagsinput', () => this.#input());
-        $.addEvent(this.#searchInput, 'keydown.ui.tagsinput', (event) => this.#keydown(event));
+
+        $.addEvent(this.#searchInput, 'keydown.ui.tagsinput', (event) => {
+            if (
+                !this.node ||
+                $.is(this.node, ':disabled') ||
+                event.isComposing ||
+                this.#composing ||
+                event.ctrlKey ||
+                event.altKey ||
+                event.metaKey
+            ) {
+                return;
+            }
+
+            const key = event.key;
+            const active = this.#open ? this.#focusedItem : null;
+
+            if (key === 'Enter' || this.options.confirmKeys.includes(key)) {
+                const value = key === 'Enter' && active ?
+                    $.getAttribute(active, 'data-ui-value') :
+                    $.getValue(this.#searchInput);
+
+                if (value || this.options.confirmKeys.includes(key)) {
+                    event.preventDefault();
+                    this.#selectValue(value);
+                }
+            } else if (key === 'Backspace' && !$.getValue(this.#searchInput) && this.#value.length) {
+                event.preventDefault();
+                this.#setValue(this.#value.slice(0, -1), true);
+            } else if (key === 'Escape' && this.#open) {
+                event.preventDefault();
+                event.stopPropagation();
+                this.hide();
+            } else if (key === 'ArrowDown' || key === 'ArrowUp') {
+                event.preventDefault();
+
+                if (!this.#open) {
+                    this.show();
+
+                    return;
+                }
+
+                const index = this.#activeItems.indexOf(active);
+                const next = index < 0 ? 0 : index + (key === 'ArrowDown' ? 1 : -1);
+                const option = this.#activeItems[next];
+
+                if (option) {
+                    this.#focusItem(option);
+                    $._callDomMethod(option, 'scrollIntoView', { block: 'nearest' });
+                }
+            }
+        });
 
         this.#scrollHandler = $._throttle(() => {
             if (
@@ -828,14 +882,14 @@ export default class TagsInput extends BaseComponent {
      * @returns {Promise<void>} Resolves when the request settles.
      */
     async #fetchResults(request, id) {
-        if (!this.node || id !== this.#requestId) {
+        if (id !== this.#requestId) {
             return;
         }
 
         try {
             const result = this.options.getResults.call(this, request);
 
-            if (!this.node || id !== this.#requestId) {
+            if (id !== this.#requestId) {
                 result?.cancel?.();
 
                 return;
@@ -845,7 +899,7 @@ export default class TagsInput extends BaseComponent {
 
             const response = await result;
 
-            if (!this.node || id !== this.#requestId) {
+            if (id !== this.#requestId) {
                 return;
             }
 
@@ -863,13 +917,13 @@ export default class TagsInput extends BaseComponent {
             this.#showMore = Boolean(response.showMore) && response.results.length > 0;
             this.#renderResults(normalizeValues(response.results), id);
         } catch {
-            if (this.node && id === this.#requestId) {
+            if (id === this.#requestId) {
                 this.#showMore = false;
                 $.remove($.children(this.#menuNode, '[role="status"]'));
                 this.#renderInfo(this.options.lang.error);
             }
         } finally {
-            if (this.node && id === this.#requestId) {
+            if (id === this.#requestId) {
                 this.#request = null;
                 this.#loading = false;
                 this.update();
@@ -902,6 +956,40 @@ export default class TagsInput extends BaseComponent {
     }
 
     /**
+     * Filters and sorts local suggestions, stopping an interrupted search.
+     * @param {string} term The search term.
+     * @param {number} id The request generation.
+     * @returns {string[]} The matching results.
+     */
+    #getLocalResults(term, id) {
+        const data = this.#data.slice();
+
+        if (!term) {
+            return data;
+        }
+
+        const options = this.options;
+        const results = [];
+
+        for (const value of data) {
+            const match = options.isMatch.call(this, value, term);
+
+            if (id !== this.#requestId) {
+                return [];
+            }
+
+            if (match) {
+                results.push(value);
+            }
+        }
+
+        return results.sort((a, b) => id === this.#requestId ?
+            options.sortResults.call(this, a, b, term) :
+            0,
+        );
+    }
+
+    /**
      * Refreshes search sizing and suggestions after input, excluding IME composition.
      */
     #input() {
@@ -922,62 +1010,6 @@ export default class TagsInput extends BaseComponent {
             this.#load();
         } else {
             this.show();
-        }
-    }
-
-    /**
-     * Handles confirmation, removal, and suggestion navigation.
-     * @param {KeyboardEvent} event The keyboard event.
-     */
-    #keydown(event) {
-        if (
-            !this.node ||
-            $.is(this.node, ':disabled') ||
-            event.isComposing ||
-            this.#composing ||
-            event.ctrlKey ||
-            event.altKey ||
-            event.metaKey
-        ) {
-            return;
-        }
-
-        const key = event.key;
-        const active = this.#open ? this.#focusedItem : null;
-
-        if (key === 'Enter' || this.options.confirmKeys.includes(key)) {
-            const value = key === 'Enter' && active ?
-                $.getAttribute(active, 'data-ui-value') :
-                $.getValue(this.#searchInput);
-
-            if (value || this.options.confirmKeys.includes(key)) {
-                event.preventDefault();
-                this.#selectValue(value);
-            }
-        } else if (key === 'Backspace' && !$.getValue(this.#searchInput) && this.#value.length) {
-            event.preventDefault();
-            this.#setValue(this.#value.slice(0, -1), true);
-        } else if (key === 'Escape' && this.#open) {
-            event.preventDefault();
-            event.stopPropagation();
-            this.hide();
-        } else if (key === 'ArrowDown' || key === 'ArrowUp') {
-            event.preventDefault();
-
-            if (!this.#open) {
-                this.show();
-
-                return;
-            }
-
-            const index = this.#activeItems.indexOf(active);
-            const next = index < 0 ? 0 : index + (key === 'ArrowDown' ? 1 : -1);
-            const option = this.#activeItems[next];
-
-            if (option) {
-                this.#focusItem(option);
-                $._callDomMethod(option, 'scrollIntoView', { block: 'nearest' });
-            }
         }
     }
 
@@ -1020,25 +1052,13 @@ export default class TagsInput extends BaseComponent {
             this.#loading = true;
             this.#renderInfo(this.options.lang.loading);
 
-            if (this.node && id === this.#requestId) {
+            if (id === this.#requestId) {
                 this.#loadResults(term ? { offset, term } : { offset }, id);
             }
         } else {
-            const options = this.options;
-            let results = this.#data.slice();
+            const results = this.#getLocalResults(term, id);
 
-            if (term) {
-                results = results.filter((value) =>
-                    this.node && id === this.#requestId && options.isMatch.call(this, value, term),
-                );
-
-                results.sort((a, b) => this.node && id === this.#requestId ?
-                    options.sortResults.call(this, a, b, term) :
-                    0,
-                );
-            }
-
-            if (this.node && id === this.#requestId) {
+            if (id === this.#requestId) {
                 this.#renderResults(results, id);
             }
         }
@@ -1052,6 +1072,33 @@ export default class TagsInput extends BaseComponent {
      */
     #readNativeValue() {
         return [...$.getProperty(this.node, 'selectedOptions')].map((option) => $.getValue(option));
+    }
+
+    /**
+     * Refreshes the selection, control state, placeholder, and editor width.
+     * Consumer callbacks can dispose the component or replace its value.
+     * @param {number} id The value generation.
+     */
+    #refresh(id) {
+        this.#renderSelection(id);
+
+        if (id !== this.#valueId) {
+            return;
+        }
+
+        this.#refreshState();
+
+        if (id !== this.#valueId) {
+            return;
+        }
+
+        this.#refreshPlaceholder();
+
+        if (id !== this.#valueId) {
+            return;
+        }
+
+        this.#updateSearchWidth();
     }
 
     /**
@@ -1078,15 +1125,13 @@ export default class TagsInput extends BaseComponent {
      * Keeps focus styling while the editor, a removal button, or the menu is active.
      */
     #refreshFocus() {
-        if (this.node) {
-            const focused = !$.is(this.node, ':disabled') &&
-                (this.#open || containsNode(this.#container, this.node.ownerDocument.activeElement));
+        const focused = !$.is(this.node, ':disabled') &&
+            (this.#open || containsNode(this.#container, this.node.ownerDocument.activeElement));
 
-            if (focused) {
-                $.addClass(this.#toggle, this.constructor.classes.focus);
-            } else {
-                $.removeClass(this.#toggle, this.constructor.classes.focus);
-            }
+        if (focused) {
+            $.addClass(this.#toggle, this.constructor.classes.focus);
+        } else {
+            $.removeClass(this.#toggle, this.constructor.classes.focus);
         }
     }
 
@@ -1453,15 +1498,22 @@ export default class TagsInput extends BaseComponent {
         const id = ++this.#valueId;
         const options = this.options;
 
-        let values = normalizeValues(value, options.trimValue)
-            .filter((entry) => this.node && id === this.#valueId && options.validTag.call(this, entry));
+        const values = [];
 
-        if (!this.node || id !== this.#valueId) {
-            return;
+        for (const entry of normalizeValues(value, options.trimValue)) {
+            const valid = options.validTag.call(this, entry);
+
+            if (id !== this.#valueId) {
+                return;
+            }
+
+            if (valid) {
+                values.push(entry);
+            }
         }
 
         if (this.#maxSelections) {
-            values = values.slice(0, this.#maxSelections);
+            values.splice(this.#maxSelections);
         }
 
         const changed = values.length !== this.#value.length ||
@@ -1469,6 +1521,33 @@ export default class TagsInput extends BaseComponent {
 
         this.#value = values;
 
+        this.#syncOptions();
+        this.#refresh(id);
+
+        if (id !== this.#valueId) {
+            return;
+        }
+
+        if (this.#open) {
+            this.#load();
+        }
+
+        if (id === this.#valueId && notify && changed) {
+            this.#notifying = true;
+
+            try {
+                $.triggerEvent(this.node, 'change.ui.tagsinput');
+            } finally {
+                this.#notifying = false;
+            }
+        }
+    }
+
+    /**
+     * Synchronizes native selection and removes unused generated options.
+     * Authored options and default selections retain their identities.
+     */
+    #syncOptions() {
         const lookup = new Map();
 
         for (const option of $.getProperty(this.node, 'options')) {
@@ -1479,7 +1558,7 @@ export default class TagsInput extends BaseComponent {
             }
         }
 
-        for (const entry of values) {
+        for (const entry of this.#value) {
             let option = lookup.get(entry);
 
             if (!option) {
@@ -1502,39 +1581,6 @@ export default class TagsInput extends BaseComponent {
         }
 
         this.#observer?.takeRecords();
-        this.#renderSelection(id);
-
-        if (!this.node || id !== this.#valueId) {
-            return;
-        }
-
-        this.#refreshState();
-
-        if (!this.node) {
-            return;
-        }
-
-        this.#refreshPlaceholder();
-
-        if (!this.node) {
-            return;
-        }
-
-        this.#updateSearchWidth();
-
-        if (this.#open) {
-            this.#load();
-        }
-
-        if (this.node && id === this.#valueId && notify && changed) {
-            this.#notifying = true;
-
-            try {
-                $.triggerEvent(this.node, 'change.ui.tagsinput');
-            } finally {
-                this.#notifying = false;
-            }
-        }
     }
 
     /**
