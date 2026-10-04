@@ -35,7 +35,8 @@ function normalizeText(value) {
 * @returns {string[]} The normalized values.
 */
 function normalizeValues(value, trim = false) {
-	return [...new Set((Array.isArray(value) ? value : [value]).filter((entry) => entry !== null && entry !== void 0).map((entry) => trim ? String(entry).trim() : String(entry)))];
+	const entries = (Array.isArray(value) ? value : [value]).filter((entry) => entry !== null && entry !== void 0).map((entry) => trim ? String(entry).trim() : String(entry));
+	return [...new Set(entries)];
 }
 
 //#endregion
@@ -225,7 +226,8 @@ var TagsInput = class extends BaseComponent {
 			this.#ariaHidden = $.getAttribute(this.node, "aria-hidden");
 			this.#maxSelections = normalizeLimit(this.options.maxSelections);
 			this.#placeholderText = String(this.options.placeholder ?? "");
-			this.#data = normalizeValues(this.options.data ?? [...$.getProperty(this.node, "options")].map((option) => $.getValue(option)));
+			const data = this.options.data ?? [...$.getProperty(this.node, "options")].map((option) => $.getValue(option));
+			this.#data = normalizeValues(data);
 			this.#loadResults = $._debounce((request, id) => this.#fetchResults(request, id), this.options.debounce);
 			const focused = $.is(this.node, ":focus");
 			this.#render();
@@ -568,7 +570,9 @@ var TagsInput = class extends BaseComponent {
 			event.preventDefault();
 			event.stopPropagation();
 			if (!this.node || $.is(this.node, ":disabled")) return;
-			this.#setValue(this.#value.filter((value) => value !== $.getAttribute(event.currentTarget, "data-ui-value")), true);
+			const key = $.getAttribute(event.currentTarget, "data-ui-value");
+			const values = this.#value.filter((value) => value !== key);
+			this.#setValue(values, true);
 			if (this.node) $.focus(this.#searchInput);
 		});
 		$.addEvent(this.#menuNode, "mousedown.ui.tagsinput", (event) => event.preventDefault());
@@ -589,7 +593,10 @@ var TagsInput = class extends BaseComponent {
 		$.addEvent(this.#searchInput, "input.ui.tagsinput", () => this.#input());
 		$.addEvent(this.#searchInput, "keydown.ui.tagsinput", (event) => this.#keydown(event));
 		this.#scrollHandler = $._throttle(() => {
-			if (this.node && this.#open && !this.#loading && this.#showMore && $.getScrollY(this.#menuNode) >= $.height(this.#menuNode, { boxSize: $.SCROLL_BOX }) - $.height(this.#menuNode) * 1.25) this.#load(this.#offset);
+			if (this.node && this.#open && !this.#loading && this.#showMore) {
+				const menu = this.#menuNode;
+				if ($.getScrollY(menu) >= $.height(menu, { boxSize: $.SCROLL_BOX }) - $.height(menu) * 1.25) this.#load(this.#offset);
+			}
 		}, 250, { leading: false });
 		$.addEvent(this.#menuNode, "scroll.ui.tagsinput", this.#scrollHandler);
 		this.#observer = new MutationObserver((records) => {
@@ -783,7 +790,10 @@ var TagsInput = class extends BaseComponent {
 	*/
 	#refreshData(records) {
 		const changed = records.some((record) => record.type === "childList" || record.target !== this.node && !$.is(record.target, "fieldset"));
-		if (changed && this.options.data === null && !this.options.getResults) this.#data = normalizeValues([...$.getProperty(this.node, "options")].map((option) => $.getValue(option)));
+		if (changed && this.options.data === null && !this.options.getResults) {
+			const values = [...$.getProperty(this.node, "options")].map((option) => $.getValue(option));
+			this.#data = normalizeValues(values);
+		}
 		return changed;
 	}
 	/**
@@ -891,6 +901,30 @@ var TagsInput = class extends BaseComponent {
 		});
 	}
 	/**
+	* Renders a keyboard-operable tag removal button.
+	* @param {string} value The tag value.
+	* @returns {HTMLButtonElement} The clear button.
+	*/
+	#renderClear(value) {
+		const classes = this.constructor.classes;
+		const button = $.create("button", {
+			class: classes.tagClear,
+			attributes: {
+				"type": "button",
+				"aria-label": `${this.options.lang.clear}: ${value}`
+			},
+			dataset: {
+				uiAction: "clear",
+				uiValue: value
+			}
+		});
+		$.append(button, $.create("span", {
+			class: classes.tagClearIcon,
+			attributes: { "aria-hidden": true }
+		}));
+		return button;
+	}
+	/**
 	* Renders callback output, stopping when the consumer disposes the component.
 	* @param {string} value The tag.
 	* @param {HTMLElement} element The destination.
@@ -920,6 +954,31 @@ var TagsInput = class extends BaseComponent {
 		}));
 	}
 	/**
+	* Renders a suggestion, stopping when the consumer disposes the component.
+	* @param {string} value The suggestion value.
+	* @returns {HTMLLIElement|null} The option element, or null after disposal.
+	*/
+	#renderItem(value) {
+		const classes = this.constructor.classes;
+		const selected = this.#value.includes(value);
+		const element = $.create("li", {
+			class: classes.item,
+			attributes: {
+				"id": generateId("tagsinput-item"),
+				"role": "option",
+				"aria-label": value,
+				"aria-selected": selected
+			},
+			dataset: {
+				uiAction: "select",
+				uiValue: value
+			}
+		});
+		if (selected) $.addClass(element, classes.active);
+		if (!this.#renderContent(value, element, this.options.renderResult)) return null;
+		return element;
+	}
+	/**
 	* Appends unique suggestions and initializes keyboard focus.
 	* @param {string[]} results The results.
 	* @param {number} id The request generation.
@@ -929,22 +988,8 @@ var TagsInput = class extends BaseComponent {
 		for (const value of results) {
 			if (seen.has(value)) continue;
 			seen.add(value);
-			const selected = this.#value.includes(value);
-			const element = $.create("li", {
-				class: this.constructor.classes.item,
-				attributes: {
-					"id": generateId("tagsinput-item"),
-					"role": "option",
-					"aria-label": value,
-					"aria-selected": selected
-				},
-				dataset: {
-					uiAction: "select",
-					uiValue: value
-				}
-			});
-			if (selected) $.addClass(element, this.constructor.classes.active);
-			if (!this.#renderContent(value, element, this.options.renderResult) || id !== this.#requestId) return;
+			const element = this.#renderItem(value);
+			if (!element || id !== this.#requestId) return;
 			this.#activeItems.push(element);
 			$.append(this.#menuNode, element);
 		}
@@ -965,24 +1010,7 @@ var TagsInput = class extends BaseComponent {
 			});
 			const label = $.create("span", { class: classes.tagItem });
 			if (!this.#renderContent(value, label, this.options.renderSelection) || id !== this.#valueId) return;
-			if (this.options.showClear) {
-				const button = $.create("button", {
-					class: classes.tagClear,
-					attributes: {
-						"type": "button",
-						"aria-label": `${this.options.lang.clear}: ${value}`
-					},
-					dataset: {
-						uiAction: "clear",
-						uiValue: value
-					}
-				});
-				$.append(button, $.create("span", {
-					class: classes.tagClearIcon,
-					attributes: { "aria-hidden": true }
-				}));
-				$.append(group, button);
-			}
+			if (this.options.showClear) $.append(group, this.#renderClear(value));
 			$.append(group, label);
 			$.append(fragment, group);
 		}

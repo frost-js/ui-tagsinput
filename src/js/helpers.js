@@ -42,7 +42,9 @@ export function normalizeText(value) {
 export function normalizeValues(value, trim = false) {
     const values = Array.isArray(value) ? value : [value];
 
-    return [...new Set(values
+    const entries = values
         .filter((entry) => entry !== null && entry !== undefined)
-        .map((entry) => trim ? String(entry).trim() : String(entry)))];
+        .map((entry) => trim ? String(entry).trim() : String(entry));
+
+    return [...new Set(entries)];
 }
