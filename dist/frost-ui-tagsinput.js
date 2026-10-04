@@ -627,8 +627,11 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			this.#observer = new MutationObserver((records) => {
 				if (!this.node) return;
 				this.#bindForm();
-				if (this.#refreshData(records)) this.#setValue(this.#readNativeValue());
-				else this.#refreshState();
+				if (this.#refreshData(records)) {
+					const focusedValue = _fr0st_query.default.getAttribute(this.#focusedItem, "data-ui-value");
+					this.#setValue(this.#readNativeValue());
+					this.#restoreFocus(focusedValue);
+				} else this.#refreshState();
 			});
 			this.#observer.observe(this.node, {
 				attributes: true,
@@ -648,6 +651,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 					"label"
 				],
 				childList: true,
+				characterData: true,
 				subtree: true
 			});
 			for (const fieldset of _fr0st_query.default.parents(this.node, "fieldset")) this.#observer.observe(fieldset, {
@@ -1016,6 +1020,18 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			}
 			_fr0st_query.default.remove(_fr0st_query.default.children(this.#toggle, "[data-ui-tag]"));
 			_fr0st_query.default.insertBefore(fragment, this.#searchInput);
+		}
+		/**
+		* Restores an option's focus and visibility after replacing result nodes.
+		* @param {string|null} value The option value key.
+		*/
+		#restoreFocus(value) {
+			if (!this.node || !this.#open) return;
+			const element = this.#activeItems.find((item) => _fr0st_query.default.getAttribute(item, "data-ui-value") === value);
+			if (element) {
+				this.#focusItem(element);
+				_fr0st_query.default._callDomMethod(element, "scrollIntoView", { block: "nearest" });
+			}
 		}
 		/**
 		* Confirms free text or a suggestion, emitting at most one effective change.

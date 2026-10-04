@@ -88,6 +88,62 @@ test.describe('TagsInput forms', () => {
             expect(await page.evaluate(() => window.changes)).toBe(0);
         });
 
+        test('synchronizes implicit option values after text-node edits', async ({ page }) => {
+            await page.evaluate(() => {
+                const option = $.findOne('#tags option');
+                $.removeAttribute(option, 'value');
+                $.setText(option, 'Apple');
+                UI.TagsInput.init($.findOne('#tags'), { minSearch: 0 }).show();
+                option.firstChild.data = 'Apricot';
+            });
+
+            await expect(page.locator('.tagsinput-selection')).toHaveText(['Apricot']);
+            await expect(page.locator('#tags')).toHaveValues(['Apricot']);
+            await expect(page.locator('#tags option')).toHaveCount(2);
+            await expect(page.getByRole('option')).toHaveText(['Apricot', 'Banana']);
+            expect(await page.evaluate(() => $('#tags').tagsinput('getValue'))).toEqual(['Apricot']);
+            expect(await page.evaluate(() => window.changes)).toBe(0);
+        });
+
+        for (const value of ['Banana', '[]', '{}']) {
+            test(`retains suggestion focus after native option changes (${value})`, async ({ page }) => {
+                await page.evaluate((value) => {
+                    $.setProperty('#tags option[value="Banana"]', 'value', value);
+                    UI.TagsInput.init($.findOne('#tags'), { minSearch: 0 });
+                }, value);
+                const control = page.getByRole('combobox');
+                await control.press('ArrowDown');
+                await control.press('ArrowDown');
+                const focused = page.getByRole('option', { name: value, exact: true });
+                await expect(control).toHaveAttribute('aria-activedescendant', await focused.getAttribute('id'));
+
+                await page.evaluate(() => $.append('#tags', '<option value="Cherry">Cherry</option>'));
+                await expect(page.getByRole('option')).toHaveText(['Apple', value, 'Cherry']);
+                await expect(control).toHaveAttribute('aria-activedescendant', await focused.getAttribute('id'));
+                await expect(focused).toHaveClass(/\bfocus\b/);
+                expect(await page.evaluate(() => window.changes)).toBe(0);
+
+                await control.press('Enter');
+                await expect(page.locator('#tags')).toHaveValues(['Apple', value]);
+                await expect(control).not.toHaveAttribute('aria-activedescendant');
+            });
+        }
+
+        test('falls back to the first suggestion when the focused native option is removed', async ({ page }) => {
+            await page.evaluate(() => UI.TagsInput.init($.findOne('#tags'), { minSearch: 0 }));
+            const control = page.getByRole('combobox');
+            await control.press('ArrowDown');
+            await control.press('ArrowDown');
+            await page.evaluate(() => $.remove('#tags option[value="Banana"]'));
+
+            await expect(page.getByRole('option')).toHaveText(['Apple']);
+            const apple = page.getByRole('option', { name: 'Apple', exact: true });
+            await expect(control).toHaveAttribute('aria-activedescendant', await apple.getAttribute('id'));
+            await control.press('Enter');
+            await expect(page.locator('#tags')).toHaveValues(['Apple']);
+            expect(await page.evaluate(() => window.changes)).toBe(0);
+        });
+
         test('updates accessible labels, descriptions, and error references', async ({ page }) => {
             await page.evaluate(() => {
                 const node = $.findOne('#tags');
@@ -178,6 +234,22 @@ test.describe('TagsInput forms', () => {
                 await expect(page.getByRole('combobox')).toBeEnabled();
             });
         }
+
+        test('clears suggestion focus when option changes and disabling are observed together', async ({ page }) => {
+            await page.evaluate(() => {
+                UI.TagsInput.init($.findOne('#tags'), { minSearch: 0 }).show();
+                $.addEvent('#tags', 'hide.ui.tagsinput', (event) => event.preventDefault());
+                $.append('#tags', '<option value="Cherry">Cherry</option>');
+                $.setProperty('#tags', 'disabled', true);
+            });
+
+            const control = page.getByRole('combobox');
+            await expect(control).toBeDisabled();
+            await expect(control).not.toHaveAttribute('aria-activedescendant');
+            await expect(page.locator('.tagsinput-menu')).toHaveCount(0);
+            await expect(page.locator('#tags')).toHaveValues(['Apple']);
+            expect(await page.evaluate(() => window.changes)).toBe(0);
+        });
 
         test('honors an initially disabled fieldset even after calling enable', async ({ page }) => {
             await page.evaluate(() => {

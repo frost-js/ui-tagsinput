@@ -696,7 +696,10 @@ export default class TagsInput extends BaseComponent {
             }
             this.#bindForm();
             if (this.#refreshData(records)) {
+                // Rebuilding results replaces nodes, so restore focus using the option value.
+                const focusedValue = $.getAttribute(this.#focusedItem, 'data-ui-value');
                 this.#setValue(this.#readNativeValue());
+                this.#restoreFocus(focusedValue);
             } else {
                 this.#refreshState();
             }
@@ -705,6 +708,7 @@ export default class TagsInput extends BaseComponent {
             attributes: true,
             attributeFilter: ['disabled', 'required', 'form', 'class', 'dir', 'aria-label', 'aria-labelledby', 'aria-describedby', 'aria-errormessage', 'aria-invalid', 'selected', 'value', 'label'],
             childList: true,
+            characterData: true,
             subtree: true,
         });
         for (const fieldset of $.parents(this.node, 'fieldset')) {
@@ -1131,6 +1135,22 @@ export default class TagsInput extends BaseComponent {
         }
         $.remove($.children(this.#toggle, '[data-ui-tag]'));
         $.insertBefore(fragment, this.#searchInput);
+    }
+
+    /**
+     * Restores an option's focus and visibility after replacing result nodes.
+     * @param {string|null} value The option value key.
+     */
+    #restoreFocus(value) {
+        if (!this.node || !this.#open) {
+            return;
+        }
+        const element = this.#activeItems.find((item) => $.getAttribute(item, 'data-ui-value') === value);
+
+        if (element) {
+            this.#focusItem(element);
+            $._callDomMethod(element, 'scrollIntoView', { block: 'nearest' });
+        }
     }
 
     /**

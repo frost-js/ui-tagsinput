@@ -595,8 +595,11 @@ var TagsInput = class extends BaseComponent {
 		this.#observer = new MutationObserver((records) => {
 			if (!this.node) return;
 			this.#bindForm();
-			if (this.#refreshData(records)) this.#setValue(this.#readNativeValue());
-			else this.#refreshState();
+			if (this.#refreshData(records)) {
+				const focusedValue = $.getAttribute(this.#focusedItem, "data-ui-value");
+				this.#setValue(this.#readNativeValue());
+				this.#restoreFocus(focusedValue);
+			} else this.#refreshState();
 		});
 		this.#observer.observe(this.node, {
 			attributes: true,
@@ -616,6 +619,7 @@ var TagsInput = class extends BaseComponent {
 				"label"
 			],
 			childList: true,
+			characterData: true,
 			subtree: true
 		});
 		for (const fieldset of $.parents(this.node, "fieldset")) this.#observer.observe(fieldset, {
@@ -984,6 +988,18 @@ var TagsInput = class extends BaseComponent {
 		}
 		$.remove($.children(this.#toggle, "[data-ui-tag]"));
 		$.insertBefore(fragment, this.#searchInput);
+	}
+	/**
+	* Restores an option's focus and visibility after replacing result nodes.
+	* @param {string|null} value The option value key.
+	*/
+	#restoreFocus(value) {
+		if (!this.node || !this.#open) return;
+		const element = this.#activeItems.find((item) => $.getAttribute(item, "data-ui-value") === value);
+		if (element) {
+			this.#focusItem(element);
+			$._callDomMethod(element, "scrollIntoView", { block: "nearest" });
+		}
 	}
 	/**
 	* Confirms free text or a suggestion, emitting at most one effective change.
