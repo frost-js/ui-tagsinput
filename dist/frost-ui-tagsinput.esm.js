@@ -223,7 +223,6 @@ var TagsInput = class extends BaseComponent {
 	#loadResults = null;
 	#maxSelections;
 	#menuNode = null;
-	#notifying = false;
 	#observer = null;
 	#offset = 0;
 	#open = false;
@@ -497,8 +496,8 @@ var TagsInput = class extends BaseComponent {
 		this.#focusHandler = () => {
 			$.focus(this.#searchInput);
 		};
-		this.#changeHandler = () => {
-			if (!this.#notifying) this.#setValue(this.#readNativeValue());
+		this.#changeHandler = (event) => {
+			if (!event.skipUpdate) this.#setValue(this.#readNativeValue());
 		};
 		$.addEvent(this.node, "focus.ui.tagsinput", this.#focusHandler);
 		$.addEvent(this.node, "change.ui.tagsinput", this.#changeHandler);
@@ -1037,14 +1036,7 @@ var TagsInput = class extends BaseComponent {
 			if (!this.node) return;
 		}
 		if (this.#open && !notify) this.#load();
-		if (notify && changed) {
-			this.#notifying = true;
-			try {
-				$.triggerEvent(this.node, "change.ui.tagsinput");
-			} finally {
-				this.#notifying = false;
-			}
-		}
+		if (notify && changed) $.triggerEvent(this.node, "change.ui.tagsinput", { data: { skipUpdate: true } });
 	}
 	/**
 	* Sizes the editor to its text.

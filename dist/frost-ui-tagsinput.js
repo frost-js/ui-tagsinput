@@ -255,7 +255,6 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 		#loadResults = null;
 		#maxSelections;
 		#menuNode = null;
-		#notifying = false;
 		#observer = null;
 		#offset = 0;
 		#open = false;
@@ -529,8 +528,8 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			this.#focusHandler = () => {
 				_fr0st_query.default.focus(this.#searchInput);
 			};
-			this.#changeHandler = () => {
-				if (!this.#notifying) this.#setValue(this.#readNativeValue());
+			this.#changeHandler = (event) => {
+				if (!event.skipUpdate) this.#setValue(this.#readNativeValue());
 			};
 			_fr0st_query.default.addEvent(this.node, "focus.ui.tagsinput", this.#focusHandler);
 			_fr0st_query.default.addEvent(this.node, "change.ui.tagsinput", this.#changeHandler);
@@ -1069,14 +1068,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 				if (!this.node) return;
 			}
 			if (this.#open && !notify) this.#load();
-			if (notify && changed) {
-				this.#notifying = true;
-				try {
-					_fr0st_query.default.triggerEvent(this.node, "change.ui.tagsinput");
-				} finally {
-					this.#notifying = false;
-				}
-			}
+			if (notify && changed) _fr0st_query.default.triggerEvent(this.node, "change.ui.tagsinput", { data: { skipUpdate: true } });
 		}
 		/**
 		* Sizes the editor to its text.

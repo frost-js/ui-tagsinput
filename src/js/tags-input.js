@@ -189,7 +189,6 @@ export default class TagsInput extends BaseComponent {
     #loadResults = null;
     #maxSelections;
     #menuNode = null;
-    #notifying = false;
     #observer = null;
     #offset = 0;
     #open = false;
@@ -585,8 +584,8 @@ export default class TagsInput extends BaseComponent {
             $.focus(this.#searchInput);
         };
 
-        this.#changeHandler = () => {
-            if (!this.#notifying) {
+        this.#changeHandler = (event) => {
+            if (!event.skipUpdate) {
                 this.#setValue(this.#readNativeValue());
             }
         };
@@ -1450,13 +1449,9 @@ export default class TagsInput extends BaseComponent {
         }
 
         if (notify && changed) {
-            this.#notifying = true;
-
-            try {
-                $.triggerEvent(this.node, 'change.ui.tagsinput');
-            } finally {
-                this.#notifying = false;
-            }
+            $.triggerEvent(this.node, 'change.ui.tagsinput', {
+                data: { skipUpdate: true },
+            });
         }
     }
 

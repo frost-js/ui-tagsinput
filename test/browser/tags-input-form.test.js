@@ -38,6 +38,26 @@ test.describe('TagsInput forms', () => {
             await expect(page.getByRole('option', { name: 'Cherry', exact: true })).toHaveAttribute('aria-selected', 'true');
         });
 
+        test('synchronizes a native change dispatched by a change listener', async ({ page }) => {
+            await page.evaluate(() => {
+                const node = $.findOne('#tags');
+                UI.TagsInput.init(node, { minSearch: 0 });
+                $.addEvent(node, 'change.ui.tagsinput', (event) => {
+                    if (event.skipUpdate) {
+                        $.setValue(node, ['Banana']);
+                        node.dispatchEvent(new Event('change', { bubbles: true }));
+                    }
+                });
+            });
+
+            await page.getByRole('combobox').click();
+            await page.getByRole('option', { name: 'Banana', exact: true }).click();
+            await expect(page.locator('.tagsinput-selection')).toHaveText(['Banana']);
+            await expect(page.locator('#tags')).toHaveValues(['Banana']);
+            expect(await page.evaluate(() => $('#tags').tagsinput('getValue'))).toEqual(['Banana']);
+            expect(await page.evaluate(() => window.changes)).toBe(2);
+        });
+
         for (const { action, expected } of [
             { action: 'add', expected: ['Apple', 'Banana', 'Cherry'] },
             { action: 'remove', expected: ['Apple'] },

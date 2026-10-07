@@ -449,9 +449,15 @@ test.describe('TagsInput', () => {
         test('emits lifecycle events in order and user change exactly once', async ({ page }) => {
             await page.evaluate(() => {
                 window.events = [];
+                window.changeSkipUpdate = null;
                 const node = $.findOne('#tags');
                 for (const event of ['show', 'shown', 'hide', 'hidden', 'change']) {
-                    $.addEvent(node, `${event}.ui.tagsinput`, () => window.events.push(event));
+                    $.addEvent(node, `${event}.ui.tagsinput`, (event) => {
+                        window.events.push(event.type);
+                        if (event.type === 'change') {
+                            window.changeSkipUpdate = event.skipUpdate;
+                        }
+                    });
                 }
                 UI.TagsInput.init(node, { minSearch: 0 });
             });
@@ -459,6 +465,7 @@ test.describe('TagsInput', () => {
             await expect.poll(() => page.evaluate(() => window.events.join(','))).toBe('show,shown');
             await page.getByRole('option', { name: 'Banana', exact: true }).click();
             await expect.poll(() => page.evaluate(() => window.events.join(','))).toBe('show,shown,change,hide,hidden');
+            expect(await page.evaluate(() => window.changeSkipUpdate)).toBe(true);
         });
 
         for (const event of ['show', 'hide']) {
