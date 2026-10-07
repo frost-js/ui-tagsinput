@@ -199,7 +199,7 @@ export default class TagsInput extends BaseComponent {
     #request = null;
     #requestId = 0;
     #resetHandler = null;
-    #resetTimer;
+    #resetTimers = new Set();
     #scrollHandler = null;
     #searchInput = null;
     #showMore = false;
@@ -279,7 +279,10 @@ export default class TagsInput extends BaseComponent {
 
         this.#transitionId++;
         this.#cancelSearch();
-        clearTimeout(this.#resetTimer);
+        for (const timer of this.#resetTimers) {
+            clearTimeout(timer);
+        }
+        this.#resetTimers.clear();
         this.#scrollHandler?.cancel();
 
         this.#observer?.disconnect();
@@ -593,14 +596,16 @@ export default class TagsInput extends BaseComponent {
 
         if (this.#form) {
             this.#resetHandler = (event) => {
-                clearTimeout(this.#resetTimer);
-                this.#resetTimer = setTimeout(() => {
+                const timer = setTimeout(() => {
+                    this.#resetTimers.delete(timer);
+
                     if (this.node && !event.defaultPrevented) {
                         $.setValue(this.#searchInput, '');
                         this.#setValue(this.#readNativeValue());
                         this.hide();
                     }
                 }, 0);
+                this.#resetTimers.add(timer);
             };
 
             $.addEvent(this.#form, 'reset.ui.tagsinput', this.#resetHandler);

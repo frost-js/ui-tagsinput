@@ -357,6 +357,38 @@ test.describe('TagsInput forms', () => {
             await expect(page.locator('.tagsinput-selection')).toHaveText(['Banana']);
         });
 
+        for (const listenerOrder of ['before', 'after']) {
+            test(`retains an accepted reset when a later reset is canceled (listener=${listenerOrder})`, async ({ page }) => {
+                await page.clock.install({ time: 0 });
+                await page.clock.pauseAt(1000);
+                await page.evaluate((listenerOrder) => {
+                    const form = $.findOne('#form');
+                    let cancel = false;
+                    const handler = (event) => {
+                        if (cancel) {
+                            event.preventDefault();
+                        }
+                    };
+                    if (listenerOrder === 'before') {
+                        form.addEventListener('reset', handler);
+                    }
+                    UI.TagsInput.init($.findOne('#tags')).setValue('Banana');
+                    if (listenerOrder === 'after') {
+                        form.addEventListener('reset', handler);
+                    }
+                    form.reset();
+                    cancel = true;
+                    form.reset();
+                }, listenerOrder);
+                await page.clock.runFor(1);
+
+                await expect(page.locator('#tags')).toHaveValues(['Apple']);
+                await expect(page.locator('.tagsinput-selection')).toHaveText(['Apple']);
+                expect(await page.evaluate(() => $('#tags').tagsinput('getValue'))).toEqual(['Apple']);
+                expect(await page.evaluate(() => window.changes)).toBe(0);
+            });
+        }
+
         test('resets through an external form owner', async ({ page }) => {
             await page.evaluate(() => {
                 $.append(document.body, '<form id="second"><button type="reset">Second reset</button></form>');

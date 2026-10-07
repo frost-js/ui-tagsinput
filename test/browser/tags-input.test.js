@@ -673,6 +673,48 @@ test.describe('TagsInput', () => {
     });
 
     test.describe('confirmKeys option', () => {
+        for (const source of ['option', 'data attribute']) {
+            for (const keys of [[';'], []]) {
+                test(`replaces default confirmation keys (${source}, ${JSON.stringify(keys)})`, async ({ page }) => {
+                    await page.evaluate(({ source, keys }) => {
+                        const node = $.findOne('#tags');
+                        if (source === 'data attribute') {
+                            $.setDataset(node, 'uiConfirmKeys', keys);
+                        }
+                        UI.TagsInput.init(node, source === 'option' ? { confirmKeys: keys } : {});
+                    }, { source, keys });
+
+                    const control = page.getByRole('combobox');
+                    await control.fill('New');
+                    await control.press('Space');
+                    await control.press(',');
+                    await expect(control).toHaveValue('New ,');
+                    await expect(page.locator('#tags')).toHaveValues(['Apple']);
+                    await control.press(keys.length ? ';' : 'Enter');
+                    await expect(page.locator('#tags')).toHaveValues(['Apple', 'New ,']);
+                    await expect(control).toHaveValue('');
+                });
+            }
+        }
+
+        test('replaces data attribute keys with explicit keys without changing shared defaults', async ({ page }) => {
+            expect(await page.evaluate(() => {
+                const node = $.findOne('#tags');
+                $.setDataset(node, 'uiConfirmKeys', [',', ' ', 'Tab']);
+                const keys = Object.freeze([';']);
+                const instance = UI.TagsInput.init(node, { confirmKeys: keys });
+                const other = $.create('select', { attributes: { multiple: true } });
+                $.append(document.body, other);
+
+                return {
+                    keys,
+                    configured: instance.options.confirmKeys,
+                    sameArray: instance.options.confirmKeys === keys,
+                    defaults: UI.TagsInput.init(other).options.confirmKeys,
+                };
+            })).toEqual({ keys: [';'], configured: [';'], sameArray: false, defaults: [',', ' '] });
+        });
+
         for (const key of [',', ' ', 'Enter']) {
             test(`confirms a tag with ${JSON.stringify(key)}`, async ({ page }) => {
                 await page.evaluate(() => UI.TagsInput.init($.findOne('#tags')));

@@ -265,7 +265,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 		#request = null;
 		#requestId = 0;
 		#resetHandler = null;
-		#resetTimer;
+		#resetTimers = /* @__PURE__ */ new Set();
 		#scrollHandler = null;
 		#searchInput = null;
 		#showMore = false;
@@ -321,7 +321,8 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			if (!this.node) return;
 			this.#transitionId++;
 			this.#cancelSearch();
-			clearTimeout(this.#resetTimer);
+			for (const timer of this.#resetTimers) clearTimeout(timer);
+			this.#resetTimers.clear();
 			this.#scrollHandler?.cancel();
 			this.#observer?.disconnect();
 			this.#popper?.dispose();
@@ -535,14 +536,15 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			_fr0st_query.default.addEvent(this.node, "change.ui.tagsinput", this.#changeHandler);
 			if (this.#form) {
 				this.#resetHandler = (event) => {
-					clearTimeout(this.#resetTimer);
-					this.#resetTimer = setTimeout(() => {
+					const timer = setTimeout(() => {
+						this.#resetTimers.delete(timer);
 						if (this.node && !event.defaultPrevented) {
 							_fr0st_query.default.setValue(this.#searchInput, "");
 							this.#setValue(this.#readNativeValue());
 							this.hide();
 						}
 					}, 0);
+					this.#resetTimers.add(timer);
 				};
 				_fr0st_query.default.addEvent(this.#form, "reset.ui.tagsinput", this.#resetHandler);
 			}
