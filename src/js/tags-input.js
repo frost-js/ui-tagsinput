@@ -214,8 +214,8 @@ export default class TagsInput extends BaseComponent {
      * @param {TagsInputOptions} [options] The component options.
      */
     constructor(node, options) {
-        if (!$.is(node, 'select') || !node.multiple) {
-            throw new Error('TagsInput must be created on a multiple select element');
+        if (!$._isElement(node) || !$.is(node, 'select[multiple]')) {
+            throw new TypeError('TagsInput must be created on a multiple select element.');
         }
 
         super(node, options);

@@ -279,7 +279,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 		* @param {TagsInputOptions} [options] The component options.
 		*/
 		constructor(node, options) {
-			if (!_fr0st_query.default.is(node, "select") || !node.multiple) throw new Error("TagsInput must be created on a multiple select element");
+			if (!_fr0st_query.default._isElement(node) || !_fr0st_query.default.is(node, "select[multiple]")) throw new TypeError("TagsInput must be created on a multiple select element.");
 			super(node, options);
 			try {
 				this.#tabIndex = _fr0st_query.default.getAttribute(this.node, "tabindex");

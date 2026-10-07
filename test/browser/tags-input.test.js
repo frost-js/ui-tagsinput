@@ -75,6 +75,52 @@ test.describe('TagsInput', () => {
             await expect(page.getByRole('combobox')).toHaveCount(2);
         });
 
+        test('rejects non-element arguments without disturbing an existing instance', async ({ page }) => {
+            const state = await page.evaluate(() => {
+                const node = $.findOne('#tags');
+                const instance = UI.TagsInput.init(node);
+                const html = $.getHtml(document.body);
+                const errors = [];
+
+                for (const [name, argument] of [
+                    ['null', null],
+                    ['undefined', undefined],
+                    ['selector', '#tags'],
+                    ['malformed selector', '['],
+                    ['array', [node]],
+                    ['QuerySet', $('#tags')],
+                    ['document', document],
+                    ['text node', document.createTextNode('text')],
+                ]) {
+                    for (const [method, init] of [
+                        ['constructor', (node) => new UI.TagsInput(node)],
+                        ['init', (node) => UI.TagsInput.init(node)],
+                    ]) {
+                        let message = null;
+
+                        try {
+                            init(argument);
+                        } catch (error) {
+                            message = `${error.name}: ${error.message}`;
+                        }
+
+                        errors.push({ name, method, message });
+                    }
+                }
+
+                return {
+                    errors,
+                    unchanged: $.getHtml(document.body) === html &&
+                        $.getData(node, UI.TagsInput.DATA_KEY) === instance,
+                };
+            });
+
+            for (const { name, method, message } of state.errors) {
+                expect(message, `${name} (${method})`).toBe('TypeError: TagsInput must be created on a multiple select element.');
+            }
+            expect(state.unchanged).toBe(true);
+        });
+
         for (const selector of ['#outside', '#tags']) {
             test(`rejects an invalid target without registering it (${selector})`, async ({ page }) => {
                 expect(await page.evaluate((selector) => {
@@ -85,7 +131,7 @@ test.describe('TagsInput', () => {
                     } catch (error) {
                         return error.message;
                     }
-                }, selector)).toBe('TagsInput must be created on a multiple select element');
+                }, selector)).toBe('TagsInput must be created on a multiple select element.');
                 expect(await page.evaluate((selector) => $.hasData(selector, 'tagsinput'), selector)).toBe(false);
             });
         }
