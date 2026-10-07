@@ -176,10 +176,8 @@ export default class TagsInput extends BaseComponent {
 
     #activeItems = [];
     #ariaHidden;
-    #changeHandler = null;
     #container = null;
     #data = [];
-    #documentHandler = null;
     #focusedItem = null;
     #focusHandler = null;
     #form = null;
@@ -197,7 +195,6 @@ export default class TagsInput extends BaseComponent {
     #popper = null;
     #request = null;
     #requestId = 0;
-    #resetHandler = null;
     #resetTimers = new Set();
     #scrollHandler = null;
     #searchInput = null;
@@ -287,22 +284,6 @@ export default class TagsInput extends BaseComponent {
         this.#observer?.disconnect();
         this.#popper?.dispose();
 
-        if (this.#focusHandler) {
-            $.removeEvent(this.node, 'focus.ui.tagsinput', this.#focusHandler);
-        }
-
-        if (this.#changeHandler) {
-            $.removeEvent(this.node, 'change.ui.tagsinput', this.#changeHandler);
-        }
-
-        if (this.#documentHandler) {
-            $.removeEvent(this.node.ownerDocument, 'click.ui.tagsinput', this.#documentHandler);
-        }
-
-        if (this.#form && this.#resetHandler) {
-            $.removeEvent(this.#form, 'reset.ui.tagsinput', this.#resetHandler);
-        }
-
         if (this.#hidden) {
             $.addClass(this.node, this.constructor.classes.hide);
         } else {
@@ -325,10 +306,7 @@ export default class TagsInput extends BaseComponent {
         this.#focusedItem = null;
         this.#generatedOptions.clear();
 
-        this.#changeHandler = null;
-        this.#documentHandler = null;
         this.#focusHandler = null;
-        this.#resetHandler = null;
 
         this.#container = null;
         this.#form = null;
@@ -584,17 +562,15 @@ export default class TagsInput extends BaseComponent {
             $.focus(this.#searchInput);
         };
 
-        this.#changeHandler = (event) => {
+        this.listen(this.node, 'focus.ui.tagsinput', this.#focusHandler);
+        this.listen(this.node, 'change.ui.tagsinput', (event) => {
             if (!event.skipUpdate) {
                 this.#setValue(this.#readNativeValue());
             }
-        };
-
-        $.addEvent(this.node, 'focus.ui.tagsinput', this.#focusHandler);
-        $.addEvent(this.node, 'change.ui.tagsinput', this.#changeHandler);
+        });
 
         if (this.#form) {
-            this.#resetHandler = (event) => {
+            this.listen(this.#form, 'reset.ui.tagsinput', (event) => {
                 const timer = setTimeout(() => {
                     this.#resetTimers.delete(timer);
 
@@ -605,12 +581,10 @@ export default class TagsInput extends BaseComponent {
                     }
                 }, 0);
                 this.#resetTimers.add(timer);
-            };
-
-            $.addEvent(this.#form, 'reset.ui.tagsinput', this.#resetHandler);
+            });
         }
 
-        this.#documentHandler = (event) => {
+        this.listen(this.node.ownerDocument, 'click.ui.tagsinput', (event) => {
             if (!this.node) {
                 return;
             }
@@ -624,9 +598,7 @@ export default class TagsInput extends BaseComponent {
             } else if (!containsNode(this.#container, event.target) && !containsNode(this.#menuNode, event.target)) {
                 this.hide();
             }
-        };
-
-        $.addEvent(this.node.ownerDocument, 'click.ui.tagsinput', this.#documentHandler);
+        });
 
         $.addEvent(this.#container, 'focusin.ui.tagsinput', () => {
             this.#refreshFocus();

@@ -242,10 +242,8 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 		};
 		#activeItems = [];
 		#ariaHidden;
-		#changeHandler = null;
 		#container = null;
 		#data = [];
-		#documentHandler = null;
 		#focusedItem = null;
 		#focusHandler = null;
 		#form = null;
@@ -263,7 +261,6 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 		#popper = null;
 		#request = null;
 		#requestId = 0;
-		#resetHandler = null;
 		#resetTimers = /* @__PURE__ */ new Set();
 		#scrollHandler = null;
 		#searchInput = null;
@@ -325,10 +322,6 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			this.#scrollHandler?.cancel();
 			this.#observer?.disconnect();
 			this.#popper?.dispose();
-			if (this.#focusHandler) _fr0st_query.default.removeEvent(this.node, "focus.ui.tagsinput", this.#focusHandler);
-			if (this.#changeHandler) _fr0st_query.default.removeEvent(this.node, "change.ui.tagsinput", this.#changeHandler);
-			if (this.#documentHandler) _fr0st_query.default.removeEvent(this.node.ownerDocument, "click.ui.tagsinput", this.#documentHandler);
-			if (this.#form && this.#resetHandler) _fr0st_query.default.removeEvent(this.#form, "reset.ui.tagsinput", this.#resetHandler);
 			if (this.#hidden) _fr0st_query.default.addClass(this.node, this.constructor.classes.hide);
 			else _fr0st_query.default.removeClass(this.node, this.constructor.classes.hide);
 			for (const [name, value] of [["tabindex", this.#tabIndex], ["aria-hidden", this.#ariaHidden]]) if (value === null) _fr0st_query.default.removeAttribute(this.node, name);
@@ -339,10 +332,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			this.#data = [];
 			this.#focusedItem = null;
 			this.#generatedOptions.clear();
-			this.#changeHandler = null;
-			this.#documentHandler = null;
 			this.#focusHandler = null;
-			this.#resetHandler = null;
 			this.#container = null;
 			this.#form = null;
 			this.#menuNode = null;
@@ -528,32 +518,27 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			this.#focusHandler = () => {
 				_fr0st_query.default.focus(this.#searchInput);
 			};
-			this.#changeHandler = (event) => {
+			this.listen(this.node, "focus.ui.tagsinput", this.#focusHandler);
+			this.listen(this.node, "change.ui.tagsinput", (event) => {
 				if (!event.skipUpdate) this.#setValue(this.#readNativeValue());
-			};
-			_fr0st_query.default.addEvent(this.node, "focus.ui.tagsinput", this.#focusHandler);
-			_fr0st_query.default.addEvent(this.node, "change.ui.tagsinput", this.#changeHandler);
-			if (this.#form) {
-				this.#resetHandler = (event) => {
-					const timer = setTimeout(() => {
-						this.#resetTimers.delete(timer);
-						if (this.node && !event.defaultPrevented) {
-							_fr0st_query.default.setValue(this.#searchInput, "");
-							this.#setValue(this.#readNativeValue());
-							this.hide();
-						}
-					}, 0);
-					this.#resetTimers.add(timer);
-				};
-				_fr0st_query.default.addEvent(this.#form, "reset.ui.tagsinput", this.#resetHandler);
-			}
-			this.#documentHandler = (event) => {
+			});
+			if (this.#form) this.listen(this.#form, "reset.ui.tagsinput", (event) => {
+				const timer = setTimeout(() => {
+					this.#resetTimers.delete(timer);
+					if (this.node && !event.defaultPrevented) {
+						_fr0st_query.default.setValue(this.#searchInput, "");
+						this.#setValue(this.#readNativeValue());
+						this.hide();
+					}
+				}, 0);
+				this.#resetTimers.add(timer);
+			});
+			this.listen(this.node.ownerDocument, "click.ui.tagsinput", (event) => {
 				if (!this.node) return;
 				const label = _fr0st_query.default.is(event.target, "label") ? event.target : _fr0st_query.default.closest(event.target, "label")[0];
 				if (_fr0st_query.default.getProperty(label, "control") === this.node && !containsNode(this.#container, event.target)) this.#focusHandler();
 				else if (!containsNode(this.#container, event.target) && !containsNode(this.#menuNode, event.target)) this.hide();
-			};
-			_fr0st_query.default.addEvent(this.node.ownerDocument, "click.ui.tagsinput", this.#documentHandler);
+			});
 			_fr0st_query.default.addEvent(this.#container, "focusin.ui.tagsinput", () => {
 				this.#refreshFocus();
 				this.#refreshPlaceholder();
