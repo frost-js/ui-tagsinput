@@ -279,7 +279,7 @@ var TagsInput = class extends BaseComponent {
 	* Disables the editor and hides suggestions.
 	*/
 	disable() {
-		$.setProperty(this.node, { disabled: true });
+		$.setAttribute(this.node, { disabled: true });
 		this.#refreshState();
 		this.hide();
 	}
@@ -322,7 +322,7 @@ var TagsInput = class extends BaseComponent {
 	* Enables the editor unless its containing fieldset remains disabled.
 	*/
 	enable() {
-		$.setProperty(this.node, { disabled: false });
+		$.removeAttribute(this.node, "disabled");
 		this.#refreshState();
 	}
 	/**
