@@ -4,6 +4,8 @@ import $ from '@fr0st/query';
 import { BaseComponent, generateId, Popper, waitForTransition } from '@fr0st/ui';
 import { containsNode, normalizeLimit, normalizeText, normalizeValues } from './helpers.js';
 
+const window = $.getWindow();
+
 const ariaAttributes = [
     'aria-describedby',
     'aria-errormessage',
@@ -290,7 +292,7 @@ export default class TagsInput extends BaseComponent {
         this.#transitionId++;
         this.#cancelSearch();
         for (const timer of this.#resetTimers) {
-            clearTimeout(timer);
+            window.clearTimeout(timer);
         }
         this.#resetTimers.clear();
         this.#scrollHandler?.cancel();
@@ -585,7 +587,7 @@ export default class TagsInput extends BaseComponent {
 
         if (this.#form) {
             this.listen(this.#form, 'reset.ui.tagsinput', (event) => {
-                const timer = setTimeout(() => {
+                const timer = window.setTimeout(() => {
                     this.#resetTimers.delete(timer);
 
                     if (this.node && !event.defaultPrevented) {
@@ -795,7 +797,7 @@ export default class TagsInput extends BaseComponent {
 
         const nativeData = !this.options.data && !this.options.getResults;
 
-        this.#observer = new MutationObserver((records) => {
+        this.#observer = new window.MutationObserver((records) => {
             if (!this.node) {
                 return;
             }

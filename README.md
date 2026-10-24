@@ -433,24 +433,7 @@ Reset restores native defaults and asynchronously updates the chips, clears the 
 
 After changing native selections programmatically, dispatch a bubbling `change` event to synchronize the component. Native option additions/removals are observed when suggestions come from the select. With `data` or `getResults`, dispatch `change` after changing native options or selections. `update()` only refreshes the menu position.
 
-## Themes and RTL
-
-Frost UI follows the user's preferred color scheme by default. Set `data-ui-theme="light"` or `data-ui-theme="dark"` on the document or an ancestor to select a theme explicitly.
-
-Load UI CSS before TagsInput CSS. Use `input-filled` or `input-outline` and optional `input-sm` / `input-lg` on the native select. See [the demo](./demo/index.html#integration) for input groups, RTL layouts, and modal-contained menus.
-
-Colors inherit Frost UI theme tokens. A menu appended outside a scoped theme needs that theme on its destination too.
-
-Menus have a `10rem` minimum width, constrained to the available space. Customize it with `--ui-tagsinput-min-width` or the `$tagsinput-min-width` Sass variable. With `fullWidth`, the menu follows the control's width.
-
-```css
-.tagsinput-menu {
-    --ui-tagsinput-item-padding-y: .5rem;
-    --ui-tagsinput-item-focus-bg: var(--ui-primary);
-}
-```
-
-Set `dir="rtl"` on the document, an ancestor, or the select before initialization. Logical spacing and Popper start/end placement follow the copied direction. Classes, sizing, and direction are copied at initialization; reinitialize after changing them.
+## Customization
 
 ### Custom Sass builds
 
@@ -478,6 +461,25 @@ npx sass --load-path=node_modules src/styles.scss dist/styles.css
 ```
 
 The `tagsinput` module forwards the [component variables](./src/scss/_vars.scss), all of which have `!default` values. Include Frost UI CSS separately. Build tools that already resolve Sass modules from npm packages do not need the explicit load path.
+
+## Themes and RTL
+
+Frost UI follows the user's preferred color scheme by default. Set `data-ui-theme="light"` or `data-ui-theme="dark"` on the document or an ancestor to select a theme explicitly.
+
+Load UI CSS before TagsInput CSS. Use `input-filled` or `input-outline` and optional `input-sm` / `input-lg` on the native select. See [the demo](./demo/index.html#integration) for input groups, RTL layouts, and modal-contained menus.
+
+Colors inherit Frost UI theme tokens. A menu appended outside a scoped theme needs that theme on its destination too.
+
+Menus have a `10rem` minimum width, constrained to the available space. Customize it with `--ui-tagsinput-min-width` or the `$tagsinput-min-width` Sass variable. With `fullWidth`, the menu follows the control's width.
+
+```css
+.tagsinput-menu {
+    --ui-tagsinput-item-padding-y: .5rem;
+    --ui-tagsinput-item-focus-bg: var(--ui-primary);
+}
+```
+
+Set `dir="rtl"` on the document, an ancestor, or the select before initialization. Logical spacing and Popper start/end placement follow the copied direction. Classes, sizing, and direction are copied at initialization; reinitialize after changing them.
 
 ## Development
 

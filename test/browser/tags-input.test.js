@@ -282,6 +282,29 @@ test.describe('TagsInput', () => {
         }
     });
 
+    test.describe('#add', () => {
+        for (const name of ['class', 'QuerySet']) {
+            test(`updates selections without emitting change (${name})`, async ({ page }) => {
+                await page.evaluate((name) => {
+                    window.changes = 0;
+
+                    const instance = UI.TagsInput.init($.findOne('#tags'));
+
+                    $.addEvent('#tags', 'change.ui.tagsinput', () => window.changes++);
+
+                    if (name === 'class') {
+                        instance.add('Banana');
+                    } else {
+                        $('#tags').tagsinput('add', 'Banana');
+                    }
+                }, name);
+
+                await expect(page.locator('#tags')).toHaveValues(['Apple', 'Banana']);
+                expect(await page.evaluate(() => window.changes)).toBe(0);
+            });
+        }
+    });
+
     for (const method of ['disable', 'enable']) {
         test.describe(`#${method}`, () => {
             test('synchronizes native and generated disabled state', async ({ page }) => {
@@ -311,47 +334,21 @@ test.describe('TagsInput', () => {
         });
     });
 
-    test.describe('#setValue', () => {
-        for (const { name, value, expected } of [
-            { name: 'null', value: null, expected: [] },
-            { name: 'undefined', value: undefined, expected: [] },
-            { name: 'a scalar', value: 'Banana', expected: ['Banana'] },
-            { name: 'an array', value: ['Apple', 'Banana'], expected: ['Apple', 'Banana'] },
-            { name: 'duplicates and new tags', value: ['Apple', 'Apple', 'New'], expected: ['Apple', 'New'] },
-            { name: 'nullish entries', value: [null, 'Banana', undefined], expected: ['Banana'] },
-        ]) {
-            test(`normalizes ${name}`, async ({ page }) => {
-                await page.evaluate((value) => UI.TagsInput.init($.findOne('#tags')).setValue(value), value);
-                await expect(page.locator('#tags')).toHaveValues(expected);
-                expect(await page.evaluate(() => $('#tags').tagsinput('getValue'))).toEqual(expected);
-            });
-        }
-
-        for (const value of [0, 12, '__proto__', 'constructor', 'toString', 'null']) {
-            test(`supports the value ${JSON.stringify(value)}`, async ({ page }) => {
-                await page.evaluate((value) => UI.TagsInput.init($.findOne('#tags')).setValue(value), value);
-                await expect(page.locator('#tags')).toHaveValues([String(value)]);
-                await expect(page.locator('.tagsinput-selection')).toHaveText([String(value)]);
-                await page.evaluate(() => $('#tags').tagsinput('setValue', null));
-                await expect(page.locator('.tagsinput-selection')).toHaveCount(0);
-            });
-        }
-
-        test('copies caller values and does not emit change', async ({ page }) => {
+    test.describe('#hide', () => {
+        test('updates visibility and expanded state', async ({ page }) => {
             await page.evaluate(() => {
-                window.changes = 0;
-                $.addEvent('#tags', 'change.ui.tagsinput', () => window.changes++);
-                const values = ['Banana'];
-                UI.TagsInput.init($.findOne('#tags')).setValue(values);
-                values.push('Changed');
+                const instance = UI.TagsInput.init($.findOne('#tags'), { minSearch: 0 });
+
+                instance.show();
+                instance.hide();
             });
-            await expect(page.locator('#tags')).toHaveValues(['Banana']);
-            expect(await page.evaluate(() => window.changes)).toBe(0);
+
+            await expect(page.getByRole('combobox')).toHaveAttribute('aria-expanded', 'false');
+            await expect(page.locator('.tagsinput-menu')).toHaveCount(0);
         });
     });
 
     for (const { method, value, expected } of [
-        { method: 'add', value: 'Banana', expected: ['Apple', 'Banana'] },
         { method: 'remove', value: 'Apple', expected: [] },
         { method: 'removeAll', expected: [] },
     ]) {
@@ -409,18 +406,54 @@ test.describe('TagsInput', () => {
         });
     });
 
-    for (const method of ['show', 'hide', 'toggle']) {
+    test.describe('#setValue', () => {
+        for (const { name, value, expected } of [
+            { name: 'null', value: null, expected: [] },
+            { name: 'undefined', value: undefined, expected: [] },
+            { name: 'a scalar', value: 'Banana', expected: ['Banana'] },
+            { name: 'an array', value: ['Apple', 'Banana'], expected: ['Apple', 'Banana'] },
+            { name: 'duplicates and new tags', value: ['Apple', 'Apple', 'New'], expected: ['Apple', 'New'] },
+            { name: 'nullish entries', value: [null, 'Banana', undefined], expected: ['Banana'] },
+        ]) {
+            test(`normalizes ${name}`, async ({ page }) => {
+                await page.evaluate((value) => UI.TagsInput.init($.findOne('#tags')).setValue(value), value);
+                await expect(page.locator('#tags')).toHaveValues(expected);
+                expect(await page.evaluate(() => $('#tags').tagsinput('getValue'))).toEqual(expected);
+            });
+        }
+
+        for (const value of [0, 12, '__proto__', 'constructor', 'toString', 'null']) {
+            test(`supports the value ${JSON.stringify(value)}`, async ({ page }) => {
+                await page.evaluate((value) => UI.TagsInput.init($.findOne('#tags')).setValue(value), value);
+                await expect(page.locator('#tags')).toHaveValues([String(value)]);
+                await expect(page.locator('.tagsinput-selection')).toHaveText([String(value)]);
+                await page.evaluate(() => $('#tags').tagsinput('setValue', null));
+                await expect(page.locator('.tagsinput-selection')).toHaveCount(0);
+            });
+        }
+
+        test('copies caller values and does not emit change', async ({ page }) => {
+            await page.evaluate(() => {
+                window.changes = 0;
+                $.addEvent('#tags', 'change.ui.tagsinput', () => window.changes++);
+                const values = ['Banana'];
+                UI.TagsInput.init($.findOne('#tags')).setValue(values);
+                values.push('Changed');
+            });
+            await expect(page.locator('#tags')).toHaveValues(['Banana']);
+            expect(await page.evaluate(() => window.changes)).toBe(0);
+        });
+    });
+
+    for (const method of ['show', 'toggle']) {
         test.describe(`#${method}`, () => {
             test('updates visibility and expanded state', async ({ page }) => {
                 await page.evaluate((method) => {
                     const instance = UI.TagsInput.init($.findOne('#tags'), { minSearch: 0 });
-                    if (method === 'hide') {
-                        instance.show();
-                    }
                     instance[method]();
                 }, method);
-                await expect(page.getByRole('combobox')).toHaveAttribute('aria-expanded', String(method !== 'hide'));
-                await expect(page.locator('.tagsinput-menu')).toHaveCount(method === 'hide' ? 0 : 1);
+                await expect(page.getByRole('combobox')).toHaveAttribute('aria-expanded', 'true');
+                await expect(page.locator('.tagsinput-menu')).toHaveCount(1);
                 if (method === 'toggle') {
                     await page.evaluate(() => $('#tags').tagsinput('toggle'));
                     await expect(page.getByRole('combobox')).toHaveAttribute('aria-expanded', 'false');

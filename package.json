@@ -47,7 +47,7 @@
         "build": "npm run build:js && npm run build:css",
         "build:css": "npm run compile:css && npm run autoprefix:css && npm run minify:css",
         "build:js": "vite build && vite build --mode umd",
-        "compile:css": "node node_modules/sass-embedded/dist/bin/sass.js --style expanded --source-map --embed-sources --no-error-css src/scss/tagsinput.scss dist/frost-ui-tagsinput.css",
+        "compile:css": "sass --style expanded --source-map --embed-sources --no-error-css src/scss/tagsinput.scss dist/frost-ui-tagsinput.css",
         "lint": "npm run lint:js && npm run lint:css",
         "lint:css": "stylelint \"src/scss/**/*.scss\"",
         "lint:js": "eslint",

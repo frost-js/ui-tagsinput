@@ -75,6 +75,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 //#endregion
 //#region src/js/tags-input.js
 /** @import { Placement, Position } from '@fr0st/ui/src/js/popper/popper.js'; */
+	var window = _fr0st_query.default.getWindow();
 	var ariaAttributes = [
 		"aria-describedby",
 		"aria-errormessage",
@@ -319,7 +320,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			if (!this.node) return;
 			this.#transitionId++;
 			this.#cancelSearch();
-			for (const timer of this.#resetTimers) clearTimeout(timer);
+			for (const timer of this.#resetTimers) window.clearTimeout(timer);
 			this.#resetTimers.clear();
 			this.#scrollHandler?.cancel();
 			this.#observer?.disconnect();
@@ -525,7 +526,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 				if (!event.skipUpdate) this.#setValue(this.#readNativeValue());
 			});
 			if (this.#form) this.listen(this.#form, "reset.ui.tagsinput", (event) => {
-				const timer = setTimeout(() => {
+				const timer = window.setTimeout(() => {
 					this.#resetTimers.delete(timer);
 					if (this.node && !event.defaultPrevented) {
 						_fr0st_query.default.setValue(this.#searchInput, "");
@@ -627,7 +628,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			}, 250, { leading: false });
 			_fr0st_query.default.addEvent(this.#menuNode, "scroll.ui.tagsinput", this.#scrollHandler);
 			const nativeData = !this.options.data && !this.options.getResults;
-			this.#observer = new MutationObserver((records) => {
+			this.#observer = new window.MutationObserver((records) => {
 				if (!this.node) return;
 				if (this.#refreshData(records)) {
 					const focusedValue = _fr0st_query.default.getAttribute(this.#focusedItem, "data-ui-value");
