@@ -63,7 +63,6 @@ $.ready(() => {
     const cities = ['Brisbane', 'Café Village', 'São Paulo', 'Zürich'];
     const topics = ['Design', 'Development', 'Testing', 'Documentation'];
     const remoteCities = Array.from({ length: 35 }, (_, index) => `City ${String(index + 1).padStart(2, '0')}`);
-    let failNextRequest = false;
 
     /**
      * Simulates a cancellable paginated service using local sample data.
@@ -75,12 +74,10 @@ $.ready(() => {
     const getResults = ({ offset, term = '' }) => {
         let timer;
         let rejectRequest;
-        const fail = failNextRequest;
-        failNextRequest = false;
         const pending = new Promise((resolve, reject) => {
             rejectRequest = reject;
             timer = setTimeout((_) => {
-                if (fail) {
+                if (term.toLowerCase() === 'error') {
                     reject(new Error('Demo search failure'));
                     return;
                 }
@@ -123,16 +120,6 @@ $.ready(() => {
     }
     $('[data-ui-toggle="tagsinput"]').tagsinput();
 
-    $('#fail-request, #retry-request').addEvent('mousedown', (event) => event.preventDefault());
-    $('#fail-request, #retry-request').addEvent('click', (event) => {
-        // Keep the requested menu open when this click reaches document listeners.
-        event.stopPropagation();
-        failNextRequest = $.getProperty(event.currentTarget, 'id') === 'fail-request';
-        const instance = TagsInput.init($.findOneById('remote'));
-        instance.hide();
-        instance.show();
-    });
-
     $('#topics-form').addEvent('submit', (event) => {
         event.preventDefault();
         const values = new FormData(event.currentTarget).getAll('topics');
@@ -140,12 +127,6 @@ $.ready(() => {
     });
     $('#topics-form').addEvent('reset', (_) => {
         $('#form-output').setText('Reset to the original topics.');
-    });
-    $('#native-change').addEvent('click', (_) => {
-        const node = $.findOneById('form-tags');
-        $.setValue(node, 'Testing');
-        // Dispatch a native event to demonstrate external input changes.
-        node.dispatchEvent(new Event('change', { bubbles: true }));
     });
     $('#toggle-fieldset').addEvent('click', (event) => {
         const fieldset = $.findOneById('demo-fieldset');

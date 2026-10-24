@@ -437,7 +437,7 @@ After changing native selections programmatically, dispatch a bubbling `change` 
 
 Frost UI follows the user's preferred color scheme by default. Set `data-ui-theme="light"` or `data-ui-theme="dark"` on the document or an ancestor to select a theme explicitly.
 
-Load UI CSS before TagsInput CSS. Use `input-filled` or `input-outline` and optional `input-sm` / `input-lg` on the native select. See [the demo](./demo/index.html#integration) for input groups, floating labels, and modal-contained menus.
+Load UI CSS before TagsInput CSS. Use `input-filled` or `input-outline` and optional `input-sm` / `input-lg` on the native select. See [the demo](./demo/index.html#integration) for input groups, RTL layouts, and modal-contained menus.
 
 Colors inherit Frost UI theme tokens. A menu appended outside a scoped theme needs that theme on its destination too.
 

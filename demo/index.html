@@ -41,8 +41,7 @@
                         <p class="lead text-body-secondary mb-4">Type a tag, choose a suggestion, or add something new. Explore editable chips, asynchronous search, and native forms.</p>
                         <nav class="d-flex flex-wrap gap-2" aria-label="Demo sections">
                             <a class="btn btn-primary ripple" href="#styles">Styles</a>
-                            <a class="btn btn-secondary ripple" href="#data">Local data</a>
-                            <a class="btn btn-outline-primary ripple" href="#behavior">Validation &amp; input</a>
+                            <a class="btn btn-secondary ripple" href="#data">Data &amp; tag entry</a>
                             <a class="btn btn-outline-primary ripple" href="#async">Async search</a>
                             <a class="btn btn-outline-primary ripple" href="#forms">Forms</a>
                             <a class="btn btn-outline-primary ripple" href="#integration">Layout</a>
@@ -69,87 +68,75 @@
         <section class="mb-5" id="styles">
             <header class="border-bottom pb-3 mb-4">
                 <h2 class="h3 mb-1">Filled, outline, and sizes</h2>
-                <p class="text-body-secondary mb-0">The original select’s input classes control the generated field. All examples allow free-entry tags.</p>
+                <p class="text-body-secondary mb-0">The native select’s input classes control the generated field and menu size.</p>
             </header>
             <div class="row g-4">
                 <div class="col-md-6">
                     <div class="card card-body h-100 p-4">
-                        <h3 class="h5">Filled · default</h3>
-                        <p class="text-body-secondary">Choose a suggestion or type a new fruit.</p>
-                        <label class="mb-2" for="filled-default">Default filled fruit</label>
-                        <select id="filled-default" class="input-filled" multiple data-ui-toggle="tagsinput" data-ui-full-width="true" data-ui-min-search="0">
-                            <option selected>Apple</option>
-                            <option>Banana</option>
-                            <option>Cherry</option>
-                        </select>
+                        <h3 class="h5">Filled sizes</h3>
+                        <p class="text-body-secondary">Small, default, and large controls and menus. Choose a fruit or type your own tag.</p>
+                        <div class="mb-3">
+                            <label class="mb-2" for="filled-small">Filled small fruit</label>
+                            <select id="filled-small" class="input-filled input-sm" multiple data-ui-toggle="tagsinput" data-ui-full-width="true" data-ui-min-search="0">
+                                <option selected>Apple</option>
+                                <option>Banana</option>
+                                <option>Cherry</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="mb-2" for="filled-default">Filled default fruit</label>
+                            <select id="filled-default" class="input-filled" multiple data-ui-toggle="tagsinput" data-ui-full-width="true" data-ui-min-search="0">
+                                <option selected>Apple</option>
+                                <option>Banana</option>
+                                <option>Cherry</option>
+                            </select>
+                        </div>
+                        <div class="mb-0">
+                            <label class="mb-2" for="filled-large">Filled large fruit</label>
+                            <select id="filled-large" class="input-filled input-lg" multiple data-ui-toggle="tagsinput" data-ui-full-width="true" data-ui-min-search="0">
+                                <option selected>Apple</option>
+                                <option>Banana</option>
+                                <option>Cherry</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
                 <div class="col-md-6">
                     <div class="card card-body h-100 p-4">
-                        <h3 class="h5">Filled · small</h3>
-                        <p class="text-body-secondary">Choose a suggestion or type a new fruit.</p>
-                        <label class="mb-2" for="filled-sm">Small filled fruit</label>
-                        <select id="filled-sm" class="input-filled input-sm" multiple data-ui-toggle="tagsinput" data-ui-full-width="true" data-ui-min-search="0">
-                            <option selected>Apple</option>
-                            <option>Banana</option>
-                            <option>Cherry</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="card card-body h-100 p-4">
-                        <h3 class="h5">Filled · large</h3>
-                        <p class="text-body-secondary">Choose a suggestion or type a new fruit.</p>
-                        <label class="mb-2" for="filled-lg">Large filled fruit</label>
-                        <select id="filled-lg" class="input-filled input-lg" multiple data-ui-toggle="tagsinput" data-ui-full-width="true" data-ui-min-search="0">
-                            <option selected>Apple</option>
-                            <option>Banana</option>
-                            <option>Cherry</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="card card-body h-100 p-4">
-                        <h3 class="h5">Outline · default</h3>
-                        <p class="text-body-secondary">Choose a suggestion or type a new fruit.</p>
-                        <label class="mb-2" for="outline-default">Default outline fruit</label>
-                        <select id="outline-default" class="input-outline" multiple data-ui-toggle="tagsinput" data-ui-full-width="true" data-ui-min-search="0">
-                            <option selected>Apple</option>
-                            <option>Banana</option>
-                            <option>Cherry</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="card card-body h-100 p-4">
-                        <h3 class="h5">Outline · small</h3>
-                        <p class="text-body-secondary">Choose a suggestion or type a new fruit.</p>
-                        <label class="mb-2" for="outline-sm">Small outline fruit</label>
-                        <select id="outline-sm" class="input-outline input-sm" multiple data-ui-toggle="tagsinput" data-ui-full-width="true" data-ui-min-search="0">
-                            <option selected>Apple</option>
-                            <option>Banana</option>
-                            <option>Cherry</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="card card-body h-100 p-4">
-                        <h3 class="h5">Outline · large</h3>
-                        <p class="text-body-secondary">Choose a suggestion or type a new fruit.</p>
-                        <label class="mb-2" for="outline-lg">Large outline fruit</label>
-                        <select id="outline-lg" class="input-outline input-lg" multiple data-ui-toggle="tagsinput" data-ui-full-width="true" data-ui-min-search="0">
-                            <option selected>Apple</option>
-                            <option>Banana</option>
-                            <option>Cherry</option>
-                        </select>
+                        <h3 class="h5">Outline sizes</h3>
+                        <p class="text-body-secondary">Small, default, and large controls and menus. Choose a fruit or type your own tag.</p>
+                        <div class="mb-3">
+                            <label class="mb-2" for="outline-small">Outline small fruit</label>
+                            <select id="outline-small" class="input-outline input-sm" multiple data-ui-toggle="tagsinput" data-ui-full-width="true" data-ui-min-search="0">
+                                <option selected>Apple</option>
+                                <option>Banana</option>
+                                <option>Cherry</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="mb-2" for="outline-default">Outline default fruit</label>
+                            <select id="outline-default" class="input-outline" multiple data-ui-toggle="tagsinput" data-ui-full-width="true" data-ui-min-search="0">
+                                <option selected>Apple</option>
+                                <option>Banana</option>
+                                <option>Cherry</option>
+                            </select>
+                        </div>
+                        <div class="mb-0">
+                            <label class="mb-2" for="outline-large">Outline large fruit</label>
+                            <select id="outline-large" class="input-outline input-lg" multiple data-ui-toggle="tagsinput" data-ui-full-width="true" data-ui-min-search="0">
+                                <option selected>Apple</option>
+                                <option>Banana</option>
+                                <option>Cherry</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
             </div>
         </section>
         <section class="mb-5" id="data">
             <header class="border-bottom pb-3 mb-4">
-                <h2 class="h3 mb-1">Local suggestions and rendering</h2>
-                <p class="text-body-secondary mb-0">Search ignores case and accents by default. Suggestions help you choose, while free entry stays available.</p>
+                <h2 class="h3 mb-1">Local data and tag entry</h2>
+                <p class="text-body-secondary mb-0">Local suggestions, custom rendering, validation, and selection limits.</p>
             </header>
             <div class="row g-4">
                 <div class="col-md-6">
@@ -179,26 +166,6 @@
                         </select>
                     </div>
                 </div>
-                <div class="col-md-6">
-                    <div class="card card-body h-100 p-4">
-                        <h3 class="h5">Initial tags</h3>
-                        <p class="text-body-secondary">Selected native options become the initial chips.</p>
-                        <label class="mb-2" for="initial">Saved topics</label>
-                        <select id="initial" class="input-outline" multiple data-ui-toggle="tagsinput" data-ui-full-width="true" data-ui-min-search="0">
-                            <option selected>Design</option>
-                            <option selected>Testing</option>
-                            <option>Documentation</option>
-                        </select>
-                    </div>
-                </div>
-            </div>
-        </section>
-        <section class="mb-5" id="behavior">
-            <header class="border-bottom pb-3 mb-4">
-                <h2 class="h3 mb-1">Validation and confirmation</h2>
-                <p class="text-body-secondary mb-0">Control which tags are accepted, how many can be selected, and when unfinished text is confirmed.</p>
-            </header>
-            <div class="row g-4">
                 <div class="col-md-6">
                     <div class="card card-body h-100 p-4">
                         <h3 class="h5">Validation and trimming</h3>
@@ -231,54 +198,6 @@
                         </select>
                     </div>
                 </div>
-                <div class="col-md-6">
-                    <div class="card card-body h-100 p-4">
-                        <h3 class="h5">Confirm on blur</h3>
-                        <p class="text-body-secondary">Type a new tag, then move focus outside the control to add it.</p>
-                        <label class="mb-2" for="confirm-blur">Confirm when leaving</label>
-                        <select id="confirm-blur" class="input-outline" multiple data-ui-toggle="tagsinput" data-ui-full-width="true" data-ui-confirm-on-blur="true">
-                        </select>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="card card-body h-100 p-4">
-                        <h3 class="h5">Clear on blur</h3>
-                        <p class="text-body-secondary">Unfinished text is discarded when focus leaves; confirmed tags remain.</p>
-                        <label class="mb-2" for="clear-blur">Clear unfinished text</label>
-                        <select id="clear-blur" class="input-outline" multiple data-ui-toggle="tagsinput" data-ui-full-width="true" data-ui-confirm-on-blur="false" data-ui-clear-on-blur="true">
-                        </select>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="card card-body h-100 p-4">
-                        <h3 class="h5">Keep on blur</h3>
-                        <p class="text-body-secondary">Leave and return to continue editing the same unfinished tag.</p>
-                        <label class="mb-2" for="keep-blur">Keep unfinished text</label>
-                        <select id="keep-blur" class="input-outline" multiple data-ui-toggle="tagsinput" data-ui-full-width="true" data-ui-confirm-on-blur="false" data-ui-clear-on-blur="false">
-                        </select>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="card card-body h-100 p-4">
-                        <h3 class="h5">Hidden removal buttons</h3>
-                        <p class="text-body-secondary">Removal buttons are hidden. Backspace with an empty editor still removes the last tag.</p>
-                        <label class="mb-2" for="no-clear">Keyboard removal</label>
-                        <select id="no-clear" class="input-outline" multiple data-ui-toggle="tagsinput" data-ui-full-width="true" data-ui-show-clear="false">
-                            <option selected>Design</option>
-                            <option selected>Testing</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="card card-body h-100 p-4">
-                        <h3 class="h5">Disabled control</h3>
-                        <p class="text-body-secondary">The native disabled attribute also disables the editor and removal buttons.</p>
-                        <label class="mb-2" for="disabled">Disabled topics</label>
-                        <select id="disabled" class="input-outline" multiple data-ui-toggle="tagsinput" data-ui-full-width="true" disabled>
-                            <option selected>Read-only example</option>
-                        </select>
-                    </div>
-                </div>
             </div>
         </section>
         <section class="mb-5" id="async">
@@ -289,12 +208,8 @@
             <div class="row g-4">
                 <div class="col-md-6">
                     <div class="card card-body h-100 p-4">
-                        <h3 class="h5">Search, pagination, and retry</h3>
-                        <p class="text-body-secondary">Loading and cancellation use a short simulated delay. Force one failure, then retry the same search.</p>
-                        <div class="d-flex flex-wrap gap-2 mb-3">
-                            <button class="btn btn-outline-danger" id="fail-request" type="button">Fail next request</button>
-                            <button class="btn btn-secondary" id="retry-request" type="button">Retry search</button>
-                        </div>
+                        <h3 class="h5">Search and pagination</h3>
+                        <p class="text-body-secondary">Scroll for more cities. Type error to simulate a failed request, then change the search to retry.</p>
                         <label class="mb-2" for="remote">Remote cities</label>
                         <select id="remote" class="input-outline" multiple data-ui-toggle="tagsinput" data-ui-full-width="true" data-ui-min-search="0" data-ui-max-height="180px">
                         </select>
@@ -321,18 +236,19 @@
             <div class="row g-4">
                 <div class="col-md-6">
                     <div class="card card-body h-100 p-4">
-                        <h3 class="h5">Required topics</h3>
+                        <h3 class="h5">Submit and reset</h3>
                         <p class="text-body-secondary">Remove every tag and submit to try native required validation.</p>
                         <form id="topics-form">
-                        <label class="mb-2" for="form-tags">Required topics</label>
-                        <select id="form-tags" class="input-outline" multiple data-ui-toggle="tagsinput" data-ui-full-width="true" name="topics" required data-ui-min-search="0">
-                            <option selected>Design</option>
-                            <option>Testing</option>
-                        </select>
+                            <div class="mb-3">
+                                <label class="mb-2" for="form-tags">Required topics</label>
+                                <select id="form-tags" class="input-outline" multiple data-ui-toggle="tagsinput" data-ui-full-width="true" name="topics" required data-ui-min-search="0">
+                                    <option selected>Design</option>
+                                    <option>Testing</option>
+                                </select>
+                            </div>
                             <div class="d-flex flex-wrap gap-2 mt-3">
                                 <button class="btn btn-primary" type="submit">Submit topics</button>
                                 <button class="btn btn-secondary" type="reset">Reset topics</button>
-                                <button class="btn btn-outline-primary" id="native-change" type="button">Select Testing natively</button>
                             </div>
                         </form>
                         <output class="d-block small mt-3" id="form-output" aria-live="polite">Submit to inspect selected topics.</output>
@@ -344,11 +260,11 @@
                         <p class="text-body-secondary">Toggle the surrounding fieldset to update the editor and removal buttons together.</p>
                         <fieldset id="demo-fieldset" disabled>
                             <legend class="visually-hidden">Fieldset example</legend>
-                        <label class="mb-2" for="fieldset-tags">Fieldset topics</label>
-                        <select id="fieldset-tags" class="input-outline" multiple data-ui-toggle="tagsinput" data-ui-full-width="true" data-ui-min-search="0">
-                            <option selected>Design</option>
-                            <option>Testing</option>
-                        </select>
+                            <label class="mb-2" for="fieldset-tags">Fieldset topics</label>
+                            <select id="fieldset-tags" class="input-outline" multiple data-ui-toggle="tagsinput" data-ui-full-width="true" data-ui-min-search="0">
+                                <option selected>Design</option>
+                                <option>Testing</option>
+                            </select>
                         </fieldset>
                         <button class="btn btn-secondary align-self-start mt-3" id="toggle-fieldset" type="button">Enable fieldset</button>
                     </div>
@@ -357,33 +273,22 @@
         </section>
         <section class="mb-5" id="integration">
             <header class="border-bottom pb-3 mb-4">
-                <h2 class="h3 mb-1">UI layout integration</h2>
-                <p class="text-body-secondary mb-0">Tags fit input groups, floating labels, RTL layouts, and modal dialogs.</p>
+                <h2 class="h3 mb-1">Layout and direction</h2>
+                <p class="text-body-secondary mb-0">UI input groups, right-to-left layout, and modal placement.</p>
             </header>
             <div class="row g-4">
                 <div class="col-md-6">
                     <div class="card card-body h-100 p-4">
                         <h3 class="h5">Input group</h3>
                         <p class="text-body-secondary">The control shares its outline and focus state with neighboring elements.</p>
-                        <label class="mb-2" for="group-tags">Grouped topics</label>
-                        <div class="input-group input-group-sm">
+                        <label class="mb-2" for="group-tags">Project topics</label>
+                        <div class="input-group">
                             <span class="input-group-text">#</span>
                             <select id="group-tags" multiple class="input-outline" data-ui-toggle="tagsinput" data-ui-min-search="0" data-ui-full-width="true">
-                                <option selected>Design</option><option>Testing</option>
+                                <option selected>Design</option>
+                                <option>Testing</option>
+                                <option>Documentation</option>
                             </select>
-                            <span class="input-group-text">topics</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="card card-body h-100 p-4">
-                        <h3 class="h5">Floating label</h3>
-                        <p class="text-body-secondary">The label remains visible above selected tags.</p>
-                        <div class="form-input">
-                            <select id="floating-tags" multiple class="input-filled input-floating" data-ui-toggle="tagsinput" data-ui-min-search="0" data-ui-full-width="true">
-                                <option selected>Design</option><option>Testing</option>
-                            </select>
-                            <label for="floating-tags" class="label-floating">Floating topics</label>
                         </div>
                     </div>
                 </div>
