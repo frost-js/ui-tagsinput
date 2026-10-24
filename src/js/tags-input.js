@@ -1,3 +1,5 @@
+/** @import { Placement, Position } from '@fr0st/ui/src/js/popper/popper.js'; */
+
 import $ from '@fr0st/query';
 import { BaseComponent, generateId, Popper, waitForTransition } from '@fr0st/ui';
 import { containsNode, normalizeLimit, normalizeText, normalizeValues } from './helpers.js';
@@ -10,16 +12,19 @@ const ariaAttributes = [
 ];
 
 /** @typedef {string|number} TagsInputValue */
+
 /**
  * @typedef {object} TagsInputResults
  * @property {TagsInputValue[]} results The suggested tags.
  * @property {boolean} [showMore=false] Whether another page is available.
  */
+
 /**
  * @typedef {object} TagsInputRequest
  * @property {number} offset The number of results already received.
  * @property {string} [term] The search term, omitted when empty.
  */
+
 /**
  * @typedef {object} TagsInputLanguage
  * @property {string} [clear] The removal button label, followed by the tag.
@@ -28,6 +33,7 @@ const ariaAttributes = [
  * @property {string} [maxSelections] The selection limit message.
  * @property {string} [search] The editor label when the select has no label.
  */
+
 /**
  * @callback TagsInputRenderer
  * @this {TagsInput}
@@ -35,19 +41,23 @@ const ariaAttributes = [
  * @param {HTMLElement} element The destination, which can be filled directly.
  * @returns {string|HTMLElement|void} HTML to sanitize, an element, or nothing.
  */
-/** @typedef {(TagsInputResults|PromiseLike<TagsInputResults>) & {cancel?: Function}} TagsInputPendingResults */
+
+/** @typedef {(TagsInputResults|PromiseLike<TagsInputResults>) & {cancel?: () => void}} TagsInputPendingResults */
+
 /**
  * @callback TagsInputGetResults
  * @this {TagsInput}
  * @param {TagsInputRequest} request The search request.
  * @returns {TagsInputPendingResults} Results or a promise, optionally exposing a cancel method.
  */
+
 /**
  * @callback TagsInputSanitizeCallback
  * @this {TagsInput}
  * @param {string} html The rendered HTML.
  * @returns {string} The sanitized HTML.
  */
+
 /**
  * @callback TagsInputMatchCallback
  * @this {TagsInput}
@@ -55,6 +65,7 @@ const ariaAttributes = [
  * @param {string} term The search term.
  * @returns {boolean} Whether the value matches.
  */
+
 /**
  * @callback TagsInputSortCallback
  * @this {TagsInput}
@@ -63,12 +74,14 @@ const ariaAttributes = [
  * @param {string} term The search term.
  * @returns {number} The relative sort order.
  */
+
 /**
  * @callback TagsInputValidTagCallback
  * @this {TagsInput}
  * @param {string} value The normalized tag value.
  * @returns {boolean} Whether the tag is valid.
  */
+
 /**
  * @typedef {object} TagsInputOptions
  * @property {string} [placeholder=''] The empty selection placeholder.
@@ -94,8 +107,8 @@ const ariaAttributes = [
  * @property {string} [maxHeight='250px'] The maximum menu height.
  * @property {string|HTMLElement|null} [appendTo=null] The menu insertion target.
  * @property {boolean} [fullWidth=false] Matches the menu width to the control.
- * @property {'auto'|'top'|'bottom'|'start'|'end'} [placement='bottom'] The preferred menu placement.
- * @property {'start'|'center'|'end'} [position='start'] The menu alignment.
+ * @property {Placement} [placement='bottom'] The preferred menu placement.
+ * @property {Position} [position='start'] The menu alignment.
  * @property {boolean} [fixed=false] Preserves the preferred placement.
  * @property {number} [spacing=0] The distance from the control.
  * @property {number|false} [minContact=false] The minimum contact with the control.
@@ -208,6 +221,7 @@ export default class TagsInput extends BaseComponent {
      * Creates a TagsInput and registers it with the native select.
      * @param {HTMLSelectElement} node The multiple select.
      * @param {TagsInputOptions} [options] The component options.
+     * @throws {TypeError} When the node is not a multiple select element.
      */
     constructor(node, options) {
         if (!$._isElement(node) || !$.is(node, 'select[multiple]')) {

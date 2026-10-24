@@ -42,6 +42,7 @@ function normalizeValues(value, trim = false) {
 
 //#endregion
 //#region src/js/tags-input.js
+/** @import { Placement, Position } from '@fr0st/ui/src/js/popper/popper.js'; */
 var ariaAttributes = [
 	"aria-describedby",
 	"aria-errormessage",
@@ -74,7 +75,7 @@ var ariaAttributes = [
 * @param {HTMLElement} element The destination, which can be filled directly.
 * @returns {string|HTMLElement|void} HTML to sanitize, an element, or nothing.
 */
-/** @typedef {(TagsInputResults|PromiseLike<TagsInputResults>) & {cancel?: Function}} TagsInputPendingResults */
+/** @typedef {(TagsInputResults|PromiseLike<TagsInputResults>) & {cancel?: () => void}} TagsInputPendingResults */
 /**
 * @callback TagsInputGetResults
 * @this {TagsInput}
@@ -133,8 +134,8 @@ var ariaAttributes = [
 * @property {string} [maxHeight='250px'] The maximum menu height.
 * @property {string|HTMLElement|null} [appendTo=null] The menu insertion target.
 * @property {boolean} [fullWidth=false] Matches the menu width to the control.
-* @property {'auto'|'top'|'bottom'|'start'|'end'} [placement='bottom'] The preferred menu placement.
-* @property {'start'|'center'|'end'} [position='start'] The menu alignment.
+* @property {Placement} [placement='bottom'] The preferred menu placement.
+* @property {Position} [position='start'] The menu alignment.
 * @property {boolean} [fixed=false] Preserves the preferred placement.
 * @property {number} [spacing=0] The distance from the control.
 * @property {number|false} [minContact=false] The minimum contact with the control.
@@ -241,6 +242,7 @@ var TagsInput = class extends BaseComponent {
 	* Creates a TagsInput and registers it with the native select.
 	* @param {HTMLSelectElement} node The multiple select.
 	* @param {TagsInputOptions} [options] The component options.
+	* @throws {TypeError} When the node is not a multiple select element.
 	*/
 	constructor(node, options) {
 		if (!$._isElement(node) || !$.is(node, "select[multiple]")) throw new TypeError("TagsInput must be created on a multiple select element.");
