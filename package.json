@@ -12,14 +12,14 @@
         "tags",
         "ui"
     ],
-    "homepage": "https://github.com/elusivecodes/FrostUI-TagsInput",
+    "homepage": "https://github.com/frost-js/ui-tagsinput",
     "bugs": {
-        "url": "https://github.com/elusivecodes/FrostUI-TagsInput/issues",
+        "url": "https://github.com/frost-js/ui-tagsinput/issues",
         "email": "elusivecodes@gmail.com"
     },
     "repository": {
         "type": "git",
-        "url": "git+https://github.com/elusivecodes/FrostUI-TagsInput.git"
+        "url": "git+https://github.com/frost-js/ui-tagsinput.git"
     },
     "license": "MIT",
     "author": "Elusive <elusivecodes@gmail.com>",

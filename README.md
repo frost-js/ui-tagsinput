@@ -1,12 +1,12 @@
 # Frost UI TagsInput
 
-[![CI](https://github.com/elusivecodes/FrostUI-TagsInput/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/elusivecodes/FrostUI-TagsInput/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/gh/elusivecodes/FrostUI-TagsInput/branch/main/graph/badge.svg)](https://codecov.io/gh/elusivecodes/FrostUI-TagsInput)
+[![CI](https://github.com/frost-js/ui-tagsinput/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/frost-js/ui-tagsinput/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/frost-js/ui-tagsinput/branch/main/graph/badge.svg)](https://codecov.io/gh/frost-js/ui-tagsinput)
 [![npm version](https://img.shields.io/npm/v/%40fr0st%2Fui-tagsinput?style=flat-square)](https://www.npmjs.com/package/@fr0st/ui-tagsinput)
 [![npm downloads](https://img.shields.io/npm/dm/%40fr0st%2Fui-tagsinput?style=flat-square)](https://www.npmjs.com/package/@fr0st/ui-tagsinput)
-[![JS gzip size](https://img.badgesize.io/elusivecodes/FrostUI-TagsInput/main/dist/frost-ui-tagsinput.min.js?compression=gzip&label=JS%20gzip%20size&style=flat-square)](https://github.com/elusivecodes/FrostUI-TagsInput/blob/main/dist/frost-ui-tagsinput.min.js)
-[![CSS gzip size](https://img.badgesize.io/elusivecodes/FrostUI-TagsInput/main/dist/frost-ui-tagsinput.min.css?compression=gzip&label=CSS%20gzip%20size&style=flat-square)](https://github.com/elusivecodes/FrostUI-TagsInput/blob/main/dist/frost-ui-tagsinput.min.css)
-[![license](https://img.shields.io/github/license/elusivecodes/FrostUI-TagsInput?style=flat-square)](./LICENSE)
+[![JS gzip size](https://img.badgesize.io/frost-js/ui-tagsinput/main/dist/frost-ui-tagsinput.min.js?compression=gzip&label=JS%20gzip%20size&style=flat-square)](https://github.com/frost-js/ui-tagsinput/blob/main/dist/frost-ui-tagsinput.min.js)
+[![CSS gzip size](https://img.badgesize.io/frost-js/ui-tagsinput/main/dist/frost-ui-tagsinput.min.css?compression=gzip&label=CSS%20gzip%20size&style=flat-square)](https://github.com/frost-js/ui-tagsinput/blob/main/dist/frost-ui-tagsinput.min.css)
+[![license](https://img.shields.io/github/license/frost-js/ui-tagsinput?style=flat-square)](./LICENSE)
 
 Editable tags for Frost UI, with free text, local and asynchronous suggestions, removable chips, and native form integration.
 
