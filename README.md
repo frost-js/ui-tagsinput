@@ -479,16 +479,6 @@ npx sass --load-path=node_modules src/styles.scss dist/styles.css
 
 The `tagsinput` module forwards the [component variables](./src/scss/_vars.scss), all of which have `!default` values. Include Frost UI CSS separately. Build tools that already resolve Sass modules from npm packages do not need the explicit load path.
 
-## Migrating from 2.x
-
-- Upgrade to UI 4 and fQuery 5. The package root is compiled ESM; browser globals come from the UMD files in `dist`.
-- Initialize only `<select multiple>` elements. Tags normalize to unique strings, including numeric zero. `getValue()` returns a copy.
-- `setValue`, `add`, `remove`, `removeAll`, and `setMaxSelections` are silent. Listen for user edits or explicitly dispatch notification after API updates.
-- `setValue(null)` clears the selection. `trimValue` defaults to `false`; enable it to trim before validation and deduplication.
-- Native options, labels, reset defaults, fieldset disabled state, and external native changes are preserved/synchronized.
-- Replace underscore-field and prototype-module access with public methods and the inherited `node` / `options` getters. Prototype composition has been removed; `src/js/wrapper.js` is now `src/js/browser.js`.
-- Replace Sass `@import` customization with `@use ... with (...)`. The variables partial is `_vars.scss`, and chips now use UI primary tokens with logical spacing. The custom Sass example above demonstrates the previous info color palette.
-
 ## Development
 
 Install dependencies with `npm ci`, then install Playwright browsers with `npx playwright install --with-deps`.

@@ -1,6 +1,6 @@
 {
     "name": "@fr0st/ui-tagsinput",
-    "version": "3.0.0",
+    "version": "3.0.1",
     "private": false,
     "description": "Editable tags input component for Frost UI with local and asynchronous suggestions, validation, and custom rendering.",
     "keywords": [
