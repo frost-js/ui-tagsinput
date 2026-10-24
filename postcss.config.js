@@ -1,3 +1,5 @@
+'use strict';
+
 /**
  * Gets the PostCSS configuration.
  * @param {object} _ The PostCSS context.

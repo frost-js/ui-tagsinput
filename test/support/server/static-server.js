@@ -8,8 +8,8 @@ const resolveModule = (specifier) => new URL(import.meta.resolve(specifier));
 
 const routes = new Map([
     ['/', { contentType: html, file: new URL('../app/index.html', import.meta.url) }],
-    ['/assets/frost-ui-tagsinput.js', { contentType: javaScript, file: new URL('../../../dist/frost-ui-tagsinput.js', import.meta.url) }],
     ['/assets/frost-ui-tagsinput.css', { contentType: css, file: new URL('../../../dist/frost-ui-tagsinput.css', import.meta.url) }],
+    ['/assets/frost-ui-tagsinput.js', { contentType: javaScript, file: new URL('../../../dist/frost-ui-tagsinput.js', import.meta.url) }],
     ['/assets/frost-ui-bundle.js', { contentType: javaScript, file: resolveModule('@fr0st/ui/dist/frost-ui-bundle.js') }],
     ['/assets/frost-ui.css', { contentType: css, file: resolveModule('@fr0st/ui/dist/frost-ui.css') }],
 ]);
