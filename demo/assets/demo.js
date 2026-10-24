@@ -99,7 +99,11 @@ $.ready(() => {
         return pending;
     };
 
-    // Initialize callback examples first; the shared selector reuses their instances.
+    // Initialize custom examples before the shared selector; init reuses existing instances.
+    TagsInput.init($.findOneById('hero-tags'), {
+        // Keep results outside the hero card's rounded overflow clipping.
+        appendTo: document.body,
+    });
     TagsInput.init($.findOneById('cities'), { data: cities });
     TagsInput.init($.findOneById('rendered'), {
         data: topics,
