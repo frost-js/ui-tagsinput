@@ -4,7 +4,7 @@
   (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory((global.UI = global.UI || {}), global.UI,global.fQuery));
 })(this, function(exports, _fr0st_ui, _fr0st_query) {
 Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
-//#region \0rolldown/runtime.js
+// \0rolldown/runtime.js
 	var __create = Object.create;
 	var __defProp = Object.defineProperty;
 	var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
@@ -30,10 +30,9 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 		enumerable: true
 	}) : target, mod));
 
-//#endregion
 _fr0st_query = __toESM(_fr0st_query, 1);
 
-//#region src/js/helpers.js
+// src/js/helpers.js
 /** @import { TagsInputValue } from './tags-input.js'; */
 	/**
 	* Checks whether a node is the parent itself or one of its descendants.
@@ -72,8 +71,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 		return [...new Set(entries)];
 	}
 
-//#endregion
-//#region src/js/tags-input.js
+// src/js/tags-input.js
 /** @import { Placement, Position } from '@fr0st/ui/src/js/popper/popper.js'; */
 	var window = _fr0st_query.default.getWindow();
 	var ariaAttributes = [
@@ -1078,12 +1076,10 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 		}
 	};
 
-//#endregion
-//#region src/js/index.js
+// src/js/index.js
 	(0, _fr0st_ui.initComponent)("tagsinput", TagsInput);
 	var js_default = TagsInput;
 
-//#endregion
 exports.TagsInput = js_default;
 });
 //# sourceMappingURL=frost-ui-tagsinput.js.map

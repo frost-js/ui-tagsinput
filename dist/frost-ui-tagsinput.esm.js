@@ -1,7 +1,7 @@
 import { BaseComponent, Popper, generateId, initComponent, waitForTransition } from "@fr0st/ui";
 import $ from "@fr0st/query";
 
-//#region src/js/helpers.js
+// src/js/helpers.js
 /** @import { TagsInputValue } from './tags-input.js'; */
 /**
 * Checks whether a node is the parent itself or one of its descendants.
@@ -40,8 +40,7 @@ function normalizeValues(value, trim = false) {
 	return [...new Set(entries)];
 }
 
-//#endregion
-//#region src/js/tags-input.js
+// src/js/tags-input.js
 /** @import { Placement, Position } from '@fr0st/ui/src/js/popper/popper.js'; */
 var window = $.getWindow();
 var ariaAttributes = [
@@ -1046,11 +1045,9 @@ var TagsInput = class extends BaseComponent {
 	}
 };
 
-//#endregion
-//#region src/js/index.js
+// src/js/index.js
 initComponent("tagsinput", TagsInput);
 var js_default = TagsInput;
 
-//#endregion
 export { js_default as default };
 //# sourceMappingURL=frost-ui-tagsinput.esm.js.map
