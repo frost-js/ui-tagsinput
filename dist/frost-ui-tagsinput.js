@@ -193,7 +193,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			tagClearIcon: "btn-close p-0 my-auto pe-none",
 			tagGroup: "btn-group my-n1",
 			tagInput: "tagsinput-input",
-			tagItem: "btn tagsinput-selection",
+			tagItem: "btn tagsinput-selection pe-none",
 			tagToggle: "tagsinput d-flex flex-wrap position-relative text-start"
 		};
 		/** @type {TagsInputOptions} */

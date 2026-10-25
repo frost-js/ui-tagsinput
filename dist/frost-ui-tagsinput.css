@@ -2,6 +2,9 @@
   min-width: 0;
   isolation: isolate;
 }
+.tagsinput-container .btn-close::before {
+  mask-size: 0.75em;
+}
 
 .tagsinput-selection {
   min-width: 0;
@@ -23,10 +26,13 @@
   --ui-btn-font-size: 0.875em;
   --ui-btn-color: var(--ui-primary-contrast);
   --ui-btn-bg: var(--ui-primary);
-  --ui-btn-border-color: var(--ui-border-color-translucent);
+  --ui-btn-border-color: transparent;
   --ui-btn-hover-bg: var(--ui-primary-highlight);
   --ui-btn-hover-border-color: var(--ui-btn-border-color);
   --ui-btn-active-border-color: var(--ui-btn-border-color);
+  --ui-btn-box-shadow: none;
+  --ui-btn-hover-box-shadow: none;
+  --ui-btn-active-box-shadow: none;
   padding-block: var(--ui-btn-padding-y);
   font-size: var(--ui-btn-font-size);
 }
@@ -35,8 +41,10 @@
   max-width: 100%;
 }
 .tagsinput .tagsinput-selection {
+  z-index: 1;
   display: block;
   cursor: inherit;
+  border-inline-start-color: rgb(from currentcolor r g b/0.25);
 }
 .tagsinput .btn-close {
   flex-shrink: 0;

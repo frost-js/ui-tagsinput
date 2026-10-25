@@ -5,6 +5,10 @@
 .tagsinput-container {
     min-width: 0;
     isolation: isolate;
+
+    .btn-close::before {
+        mask-size: vars.$tagsinput-clear-icon-size;
+    }
 }
 
 .tagsinput-selection {
@@ -33,6 +37,9 @@
         --ui-btn-hover-bg: #{vars.$tagsinput-btn-hover-bg};
         --ui-btn-hover-border-color: #{vars.$tagsinput-btn-hover-border-color};
         --ui-btn-active-border-color: #{vars.$tagsinput-btn-active-border-color};
+        --ui-btn-box-shadow: none;
+        --ui-btn-hover-box-shadow: none;
+        --ui-btn-active-box-shadow: none;
 
         padding-block: var(--ui-btn-padding-y);
         font-size: var(--ui-btn-font-size);
@@ -44,8 +51,10 @@
     }
 
     .tagsinput-selection {
+        z-index: 1;
         display: block;
         cursor: inherit;
+        border-inline-start-color: rgb(from currentcolor r g b / .25);
     }
 
     .btn-close {

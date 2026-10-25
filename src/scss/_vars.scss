@@ -1,10 +1,12 @@
 // tagsinput
+$tagsinput-clear-icon-size: .75em !default;
+
 $tagsinput-btn-padding-y: .125rem !default;
 $tagsinput-btn-font-size: .875em !default;
 
 $tagsinput-btn-color: var(--ui-primary-contrast) !default;
 $tagsinput-btn-bg: var(--ui-primary) !default;
-$tagsinput-btn-border-color: var(--ui-border-color-translucent) !default;
+$tagsinput-btn-border-color: transparent !default;
 $tagsinput-btn-hover-bg: var(--ui-primary-highlight) !default;
 $tagsinput-btn-hover-border-color: var(--ui-btn-border-color) !default;
 $tagsinput-btn-active-border-color: var(--ui-btn-border-color) !default;
